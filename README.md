@@ -7,10 +7,7 @@ This pipeline optimizes flexible protein-protein and antibody-antigen interactio
 $ git clone https://github.com/ibalafkir/diffpele.git
 $ conda create --name diffpele python=3.11
 $ conda activate diffpele
-$ pip install -r ./diffpele/requirements.txt
 ```
-
-### Automated setup
 For developers:
 ```bash
 $ python setup.py develop
@@ -19,4 +16,3 @@ For users:
 ```bash
 $ python setup.py install
 ```
-
