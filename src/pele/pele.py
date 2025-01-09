@@ -17,9 +17,13 @@ display_full_dataframe()
 
 #####
 ### TODO:
-# Completar el create pele conf prod
-# en adaptive prod, si el modo es diffusion, que coja los pdb equilibrados de pdbsEQ que creara el script de equilibrar pele
-####3
+
+# remove diff mode
+# releer todo el codigo, comentar variables y eliminar single/diffusion mode. verificar como hago para coger segun que cadena
+
+# hacer script donde considerar single y diff mode. esta clase que solo considere single mode.
+        # para considerar diff mode, lo que haya en pdbs eliminarlo y copiar pdbs del path con diff models
+####
 
 def validate_and_get_chains(receptor_chains, ligand_chain):
     
@@ -67,7 +71,7 @@ def validate_and_get_chains(receptor_chains, ligand_chain):
     return chains_to_keep, receptor_chains, ligand_chain
 
 
-class PeleBuilder:
+class PeleSetup:
     
     def __init__(
         self,
@@ -79,8 +83,8 @@ class PeleBuilder:
         diffmodels_path: str = None
     ):
         """
-        Initialize the PeleBuilder class.
-        Build PELE configuration and control files for a given PDB file,
+        Initialize the PeleSetup class.
+        Build PELE runners, configuration and control files for a given PDB file,
         the receptor and ligand chains, and a distance cut-off.
         Resulting files will be run in MareNostrumV, the PELE++ and 
         AdaptivePELE conda environments
@@ -90,13 +94,7 @@ class PeleBuilder:
         receptor_chains (str): Chain ID for the receptor protein chains or chain.
         ligand_chain (str): Chain ID for the ligand protein chain.
         distance_cutOff (float): Distance cut-off for interaction analysis. Default is 12.0.
-        mode (str): Mode to run PELE. 
-                    "single" to run for a single system. Default
-                    "diffusion" to run for multiple diffusion models originated from a single system.
-                    in this case, interface metrics are obtained from this first system and thus its
-                    path needs to be provided.
-        diffmodels_path (str): Path to the diffusion models. Required only if mode is "diffusion".
-                               It must contain 40 PDB diffusion models.
+                                 Useful to compute the distance between the interacting residues.
         """
         
         # Validate inputs
@@ -120,7 +118,7 @@ class PeleBuilder:
         self.pdb_code = None
         self.pdb_file = None
         self.base_dir = None
-        self.base_dir_pdb = None
+        self.base_dir_pdbs = None
         self.base_dir_control = None
         self.receptor_chain_1, self.receptor_chain_2 = None, None # in case there are 2 receptor chains
         
@@ -229,57 +227,34 @@ class PeleBuilder:
         self.base_dir = self.pdb_path[:-4]+"_pele"
         
         # Subdirectories in base PELE directory
-        self.base_dir_pdb = self.base_dir+"/pdbs"
+        self.base_dir_pdbs = self.base_dir+"/pdbs"
         self.base_dir_control = self.base_dir+"/ctrl"
+        self.base_dir_ref = self.base_dir+"/ref"
+        self.base_dir_pdbsEQ = self.base_dir+"/pdbsEQ"
         
         # Make directories
         os.makedirs(self.base_dir, exist_ok=True)
-        os.makedirs(self.base_dir_pdb, exist_ok=True)
+        os.makedirs(self.base_dir_pdbs, exist_ok=True)
         os.makedirs(self.base_dir_control, exist_ok=True)
+        os.makedirs(self.base_dir_ref, exist_ok=True)
+        os.makedirs(self.base_dir_pdbsEQ, exist_ok=True)
         
         # Copy input PDB file to base_dir/pdbs (PELE runners will look for PDBs there)
         if self.mode == "single":
-            shutil.copy(self.pdb_path, self.base_dir_pdb)
-        # If mode is diffusion, copy all PDBs in diffmodel_path to base_dir/pdbs
-        else: 
-            pdb_files = glob.glob(os.path.join(self.diffmodels_path, "*.pdb"))
-            for pdb_file in pdb_files:
-                shutil.copy(pdb_file, self.base_dir_pdb)
+            shutil.copy(self.pdb_path, self.base_dir_pdbs)
+            shutil.copy(self.pdb_path, self.base_dir_ref)
                 
 
-    def create_nbdsuite_runner(self):
+    def create_nbdsuite_runner(self, suiteJobRunnerName, nCPUs):
 
         # Content for runner
-        content = f"""\
-            #!/bin/bash
-            #SBATCH -J {self.pdb_code}_sui
-            #SBATCH --output=%x.out
-            #SBATCH --error=%x.err
-            #SBATCH --ntasks=____noOfCPUs____
-            #SBATCH --qos=gp_debug
-            #SBATCH --time=0:10:00
-            #SBATCH --account=bsc72
-
-            ml intel/2023.2.0
-            ml cmake/3.25.1
-            ml impi/2021.10.0
-            ml mkl/2023.2.0
-            ml miniconda/24.1.2
-            ml boost/1.77.0-gcc
-
-            source activate /gpfs/projects/bsc72/conda_envs/nbdsuite/0.5.0
-            umask u=rwx,g=rwx,o=
-
-            python -m nbdsuite.main input.yaml
-        """
+        template_path = os.path.join(os.path.dirname(__file__), "pele_templates/nbdsuite.sh")
+        with open(template_path, "r") as file:
+            content = file.read()
 
         # Adjustments  
-        if self.mode == "single":
-            content = content.replace("____eqJobName____", f"{self.pdb_code[:2]}_sui")
-            content = content.replace("____noOfCPUs____", "1")    
-        else:
-            content = content.replace("____eqJobName____", f"{self.pdb_code[:2]}_df_sui")
-            content = content.replace("____noOfCPUs____", "40")
+        content = content.replace("_SJRN_", suiteJobRunnerName)
+        content = content.replace("_nCPUs_", str(nCPUs)) 
         
         # Remove leading spaces and write content into file
         content = textwrap.dedent(content)
@@ -288,29 +263,15 @@ class PeleBuilder:
             file.write(content)
             
             
-    def create_nbdsuite_input(self):
+    def create_nbdsuite_input(self, nCPUs):
         
         # Content for input.yaml
-        content = f"""\
-            system_data: pdbs/*.pdb
-            cpus: ____noOfCPUs____
-            name: processed
-            pipeline:
-                - block: topology_extractor
-                - block: pele_pdb_preprocessor
-                options:
-                    set_unique_pdb_atom_names: True
-                    fix_side_chains: True
-                - block: topology_retriever
-                options:
-                    restore_original_names: True
-        """
+        template_path = os.path.join(os.path.dirname(__file__), "pele_templates/nbdsuite_input.yaml")
+        with open(template_path, "r") as file:
+            content = file.read()
 
         # Adjustments  
-        if self.mode == "single":
-            content = content.replace("____noOfCPUs____", "1")
-        else: # mode == "diffusion"
-            content = content.replace("____noOfCPUs____", "40")
+        content = content.replace("_nCPUs_", str(nCPUs))
 
         # Remove leading spaces and write content into file
         content = textwrap.dedent(content)
@@ -318,49 +279,17 @@ class PeleBuilder:
         with open(output_path, "w") as file:
             file.write(content)
 
-    
-    def create_equilibration_runner(self):
+
+    def create_equilibration_runner(self, nCPUs, equiJobRunnerName):
         
         # Content for runner
-        content = f"""\
-            #!/bin/bash
-            #SBATCH --job-name ____eqJobName____
-            #SBATCH --output=%x.out
-            #SBATCH --error=%x.err
-            #SBATCH --ntasks=____noOfCPUs____
-            #SBATCH --time=2:00:00            
-            #SBATCH -D .
-            #SBATCH --cpus-per-task=1
-            #SBATCH --qos=gp_debug
-            #SBATCH --account=bsc72
-
-
-            module purge
-            ml intel/2023.2.0
-            ml cmake/3.25.1
-            ml impi/2021.10.0
-            ml mkl/2023.2.0
-            ml boost/1.77.0-gcc
-            module load anaconda
-
-            export SCHRODINGER="/gpfs/projects/bsc72/Programs/SCHRODINGER_ACADEMIC"
-            export SCHRODINGER_PYTHONPATH="/gpfs/projects/bsc72/Programs/SCHRODINGER_ACADEMIC/internal/lib/python2.7/site-packages"
-            export PELE="/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/"
-            export PELE_EXEC="/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/PELE-1.8_mpi_intel"
-            export SRUN=1  # this is to avoid having to set usesrun: true in input.yaml
-            source activate /gpfs/projects/bsc72/conda_envs/adaptive
-
-            python -m AdaptivePELE.adaptiveSampling ctrl/adEQ.conf
-        """
+        content = os.path.join(os.path.dirname(__file__), "pele_templates/runEq.sh")
+        with open(content, "r") as file:
+            content = file.read()
         
         # Adjustments
-        if self.mode == "single":
-            content = content.replace("____eqJobName____", f"{self.pdb_code[:2]}_eq")
-            content = content.replace("____noOfCPUs____", "16")
-
-        else: # mode == "diffusion"
-            content = content.replace("____eqJobName____", f"{self.pdb_code[:2]}_df_eq")
-            content = content.replace("____noOfCPUs____", "201")
+        content = content.replace("_EJRN_", equiJobRunnerName)
+        content = content.replace("_nCPUs_", str(nCPUs))
             
         # Remove leading spaces and write content into file
         content = textwrap.dedent(content)
@@ -369,47 +298,17 @@ class PeleBuilder:
             file.write(content)
 
 
-    def create_production_runner(self):
+    def create_production_runner(self, nCPUs, prodJobRunnerName):
 
         # Content for runner
-        content = f"""\
-                #!/bin/bash
-                #SBATCH --job-name ____prodJobName____
-                #SBATCH --output=%x.out
-                #SBATCH --error=%x.err
-                #SBATCH --ntasks=____noOfCPUs____
-                #SBATCH --time=24:00:00            
-                #SBATCH -D .
-                #SBATCH --cpus-per-task=1
-                #SBATCH --qos=gp_bscls
-                #SBATCH --account=bsc72
-
-                module purge
-                ml intel/2023.2.0
-                ml cmake/3.25.1
-                ml impi/2021.10.0
-                ml mkl/2023.2.0
-                ml boost/1.77.0-gcc
-                module load anaconda
-
-                export SCHRODINGER="/gpfs/projects/bsc72/Programs/SCHRODINGER_ACADEMIC"
-                export SCHRODINGER_PYTHONPATH="/gpfs/projects/bsc72/Programs/SCHRODINGER_ACADEMIC/internal/lib/python2.7/site-packages"
-                export PELE="/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/"
-                export PELE_EXEC="/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/PELE-1.8_mpi_intel"
-                export SRUN=1  # this is to avoid having to set usesrun: true in input.yaml
-                source activate /gpfs/projects/bsc72/conda_envs/adaptive
-
-                python -m AdaptivePELE.adaptiveSampling ctrl/adProd.conf
-        """
+        content = os.path.join(os.path.dirname(__file__), "pele_templates/runProd.sh")
+        with open(content, "r") as file:
+            content = file.read()
         
         # Adjustments  
-        if self.mode == "single":
-            content = content.replace("____prodJobName____", f"{self.pdb_code[:2]}_prod")
-            content = content.replace("____noOfCPUs____", "64")
-        else: # mode == "diffusion"
-            content = content.replace("____prodJobName____", f"{self.pdb_code[:2]}_df_prod")
-            content = content.replace("____noOfCPUs____", "209")
-        
+        content = content.replace("_PJRN_", prodJobRunnerName)
+        content = content.replace("_nCPUs_", str(nCPUs))
+
         # Remove leading spaces and write content into file
         content = textwrap.dedent(content)
         output_path = os.path.join(self.base_dir, "runProd.sh")
@@ -417,73 +316,19 @@ class PeleBuilder:
             file.write(content)
 
 
-    def create_control_adaptive_equilibration(self):
+    def create_control_adaptive_equilibration(self, outputPathName, nEpochs, nSteps, nCPUs):
 
         # Content for control file
-        content = """\
-        {
-            "generalParams" : {
-                "restart": true,
-                "outputPath": "____outputPathNameToChange____",
-            "initialStructures" : ["processed/3_topology_retriever/systems/*_1.pdb"]    },
-            "spawning" : {
-                "type" : "independent",
-                "params" : {
-                    "reportFilename" : "report",
-                    "metricColumnInReport" : 5,
-                    "epsilon": 0.50,
-                    "T":1000
-            },
-                "density" :{
-                    "type": "null"
-                }
-            },
-            "simulation": {
-                "type" : "pele",
-                "params" : {
-                    "iterations" : ____noOfIter____,
-                    "peleSteps" : ____noOfPeleSteps____,
-                    "processors" : ____noOfCPUs____,
-                    "runEquilibration" : false,
-                    "equilibrationLength" : 1,
-                    "seed": 12345,
-                    "executable": "/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/PELE-1.8_mpi",
-                    "data": "/gpfs/projects/bsc72/PELE++/mnv/1.8.0/Data",
-                    "documents": "/gpfs/projects/bsc72/PELE++/mnv/1.8.0/Documents",
-                    "useSrun": true,
-                    "controlFile" : "control_files/peleEQ.conf"
-                }
-            },
-            "clustering" : {
-                "type" : "rmsd",
-                "params" : {
-                    "ligandChain" : "____ligandChainToChange____",
-                    "alternativeStructure" : true,
-                    "contactThresholdDistance" : 8
-                },
-                "thresholdCalculator":{
-                    "type" : "heaviside",
-                    "params" : {
-                    "values" : [2.0, 3, 5],
-                    "conditions": [0.20, 0.12, 0]
-                    }
-                }
-            }
-        }
-        """
+        content = os.path.join(os.path.dirname(__file__), "pele_templates/adEq.conf")
+        with open(content, "r") as file:
+            content = file.read()
         
         # Adjustments   
-        if self.mode == "single":
-            content = content.replace("____outputPathNameToChange____", f"{self.pdb_code}_eq")
-            content = content.replace("____noOfIter____", "1")
-            content = content.replace("____noOfPeleSteps____", "40")
-            content = content.replace("____noOfCPUs____", "16")            
-            content = content.replace("____ligandChainToChange____", self.ligand_chain)
-        else: # mode == "diffusion"
-            content = content.replace("____outputPathNameToChange____", f"{self.pdb_code}_df_eq")
-            content = content.replace("____noOfIter____", "1")
-            content = content.replace("____noOfPeleSteps____", "40")
-            content = content.replace("____noOfCPUs____", "201")
+        content = content.replace("_OPN_", outputPathName)
+        content = content.replace("_nE_", str(nEpochs))
+        content = content.replace("_nS_", str(nSteps))
+        content = content.replace("_nCPUs_", str(nCPUs))            
+        content = content.replace("_ligandChainName_", self.ligand_chain)
 
         # Remove leading spaces and write content into file
         content = textwrap.dedent(content)
@@ -492,75 +337,19 @@ class PeleBuilder:
             file.write(content)
 
 
-    def create_control_adaptive_production(self):
+    def create_control_adaptive_production(self, outputPathName, nEpochs, nSteps, nCPUs):
 
         # Content for control file
-        content = """\
-            {
-                "generalParams" : {
-                    "restart": true,
-                    "outputPath":"____outputPathNameToChange____",
-                "initialStructures" : ["pdbs/eq.pdb"]    },
-                "spawning" : {
-                    "type" : "independent",
-                    "params" : {
-                        "reportFilename" : "report",
-                        "metricColumnInReport" : 5,
-                        "epsilon": 0.50,
-                        "T":1000
-                },
-                    "density" :{
-                        "type": "null"
-                    }
-                },
-                "simulation": {
-                    "type" : "pele",
-                    "params" : {
-                        "iterations" : ____noOfIter____,
-                        "peleSteps" : ____noOfPeleSteps____,
-                        "processors" : ____noOfCPUs____,
-                        "runEquilibration" : false,
-                        "equilibrationLength" : 1,
-                        "seed": 12345,
-                        "executable": "/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/PELE-1.8_mpi",
-                        "data": "/gpfs/projects/bsc72/PELE++/mnv/1.8.0/Data",
-                        "documents": "/gpfs/projects/bsc72/PELE++/mnv/1.8.0/Documents",
-                        "useSrun": true,
-                        "controlFile" : "control_files/pelePROD.conf"
-                    }
-                },
-                "clustering" : {
-                    "type" : "rmsd",
-                    "params" : {
-                        "ligandChain" : "____ligandChainToChange____",
-                        "alternativeStructure" : true,
-                        "contactThresholdDistance" : 8
-                    },
-                    "thresholdCalculator":{
-                        "type" : "heaviside",
-                        "params" : {
-                        "values" : [2.0, 3, 5],
-                        "conditions": [0.20, 0.12, 0]
-                        }
-                    }
-                }
-            }     
-        """
+        content = os.path.join(os.path.dirname(__file__), "pele_templates/adProd.conf")
+        with open(content, "r") as file:
+            content = file.read()
         
-        # Adjustments
-
-        if self.mode == "single":
-            content = content.replace("____outputPathNameToChange____", f"{self.pdb_code}_eq")            
-            content = content.replace("____noOfIter____", "1")
-            content = content.replace("____noOfPeleSteps____", "200")
-            content = content.replace("____noOfCPUs____", "64")
-            content = content.replace("____ligandChainToChange____", self.ligand_chain)
-        else: # mode == "diffusion"
-            content = content.replace("____outputPathNameToChange____", f"{self.pdb_code}_df_eq")
-            content = content.replace("____noOfIter____", "1")
-            content = content.replace("____noOfPeleSteps____", "200")
-            content = content.replace("____noOfCPUs____", "209")
-            content = content.replace("____ligandChainToChange____", self.ligand_chain)
+        # Adjustments   
+        content = content.replace("_OPN_", outputPathName)
+        content = content.replace("_nE_", str(nEpochs))
+        content = content.replace("_nS_", str(nSteps))
+        content = content.replace("_nCPUs_", str(nCPUs))            
+        content = content.replace("_ligandChainName_", self.ligand_chain)
 
         # Remove leading spaces and write content into file
         content = textwrap.dedent(content)
@@ -572,209 +361,115 @@ class PeleBuilder:
     def create_pele_conf_equilibration(self):
         
         # Content for control file
-        content = """\
-        {
-        "licenseDirectoryPath" : "/gpfs/projects/bsc72/PELE++/license",
-        "simulationLogPath" : "$OUTPUT_PATH/logFile.txt",  
-        "Initialization" : {
-            "allowMissingTerminals": true,
-            "ForceField" : "OPLS2005",
-            "MultipleComplex": [ $COMPLEXES ],
-            "Solvent" : {
-                "ionicStrength" : 0.15, "solventType" : "VDGBNP", "useDebyeLength" : true }
-        },
-        "verboseMode": true,
-        "commands" : [
-            {
-                "commandType" : "peleSimulation",
-                "RandomGenerator" : { "seed" : $SEED },
-                "selectionToPerturb" : { "chains" : { "names" : [ "____ligandChainToChange____" ] } },
-                "PELE_Output" : {
-                    "savingFrequencyForAcceptedSteps" : 1,
-                    "savingMode" : "savingTrajectory",
-                    "reportPath": "$OUTPUT_PATH/report",
-                    "trajectoryPath": "$OUTPUT_PATH/trajectory.pdb"
-                },
-                "PELE_Parameters" : {
-                    "anmFrequency" : 4,
-                    "sideChainPredictionFrequency" : 1,
-                    "minimizationFrequency" : 1,
-                    "activateProximityDetection": false,
-                    "temperature": 1500,
-                    "numberOfPeleSteps": $PELE_STEPS
-                },
-                "Perturbation": {
-                        "perturbationType":"naive",
-                        "translationDirection": "random",
-                        "rotationAngles": "nonCoupled",
-                        "parameters": {
-                            "peleRegionType": "interfaceLinks",
-                            "steeringUpdateFrequency": 1,
-                            "influenceRange": 3, 
-                    "perturbAllAtOnce": true
-                        }   
-                    },
-                "ANM" : {
-                    "algorithm": "CARTESIANS", "nodes": { "atoms": { "names": [ "_CA_" ]} },
-                    "ANMMinimizer" : {
-                    "algorithm" : "TruncatedNewton",
-                    "parameters" : {
-                        "MaximumMinimizationIterations" : 1,
-                        "MaximumNewtonIterations" : 20,
-                        "MinimumRMS" : 1.0,
-                        "alphaUpdated" : false,
-                        "nonBondingListUpdatedEachMinStep" : false
-                    }
-                    },
-                    "options" : {
-                    "directionGeneration" : "random",
-                    "modesMixingOption" : "mixMainModeWithOthersModes",
-                    "pickingCase" : "RANDOM_MODE"
-                    },
-                    "parameters" : {
-                    "displacementFactor" : 0.25,
-                    "eigenUpdateFrequency" : 1000000,
-                    "mainModeWeightForMixModes" : 0.5,
-                    "modesChangeFrequency" : 4,
-                    "numberOfModes": 6,
-                    "relaxationSpringConstant" : 0.0
-                    }
-            },
+        content = os.path.join(os.path.dirname(__file__), "pele_templates/peEq.conf")
+        with open(content, "r") as file:
+            content = file.read()        
 
-                "SideChainPrediction" : {
-                    "algorithm" : "zhexin",
-                    "parameters" : { "discardHighEnergySolutions" : false, "resolution": 10, "randomize" : false, "numberOfIterations": 1 }
-                },
-
-                "Minimizer" : {
-                    "algorithm" : "TruncatedNewton",
-                    "parameters" : { "MaximumMinimizationIterations" : 20, "MaximumNewtonIterations" : 1, "MinimumRMS" : 0.1, "alphaUpdated" : false, "nonBondingListUpdatedEachMinStep" : false }
-                },
-                "PeleTasks" : [
-                    {
-
-                        "metrics" : [
-
-                                { "type": "bindingEnergy",
-                                    "tag": "Binding_energy",
-                                    "boundPartSelection": { "chains": { "names": ["____ligandChainToChange____"] } },
-                                    "allowMultipleBindingSelection" : true
-
-                                },
-
-                                { "type": "sasa",
-                                    "tag": "SASA_ligand",
-                                    "selection": { "chains": { "names": ["____ligandChainToChange____"] } }
-
-                                },
-
-                                {
-                                "type":"com_distance",
-                                "tag":"ParaEpi_distance",
-                                "selection_group_1":{
-                                    "links": { "ids":____receptorInteractingRes____}},
-                                },
-                                "selection_group_2":{
-                                    "links": { "ids":____ligandInteractingRes____}},
-                                },
-
-                                {
-                                "type": "rmsd",
-                                "tag": "L-RMSD",
-                                "Native": {
-                                        "path": "./pdbs/____pdbNameToChange____",},
-                                "selection": {
-                                        "chains": {"names": [ "____ligandChainToChange____" ] },
-                                        "atoms": {"names": [ "_CA_" ]}},
-                                "doSuperposition": true,
-                                "superpositionSelection": {
-                                        "chains": {"names": ____receptorChainsToChange____ }}
-                                },
-                                
-                                { "tag" : "rand", "type" : "random" },
-                                { "tag" : "rand2", "type" : "random" },
-                                { "tag" : "rand1", "type" : "random" }
-                            ] ,
-
-
-                    "parametersChanges" : [
-                        { "ifAnyIsTrue": [ "rand1 >= 0.5" ],
-                        "doThesechanges": { "Perturbation::parameters": {  "rotationScalingFactor": 0.01 } },
-                        "otherwise": { "Perturbation::parameters": { "rotationScalingFactor": 0.01 } }
-                        },
-                        { "ifAnyIsTrue": [ "rand >= 0.5" ],
-                        "doThesechanges": { "Perturbation::parameters": { "translationRange": 0.02, "numberOfTrials" : 2, "numberOfStericTrials": 500  } },
-                        "otherwise": { "Perturbation::parameters": { "translationRange": 0.02, "numberOfTrials" : 2, "numberOfStericTrials": 500 } }
-                        }
-                    ]
-                    }
-                ]
-                }
-                ]
-        }
-        """
-
-        # Adjustments
-        
-        if self.mode == "single":
-        
-            # Get interacting residues
-            # only interface between receptor chain 1 and ligand chain in case the receptor has 2 chains
-            if len(self.receptor_chains) == 1 and self.receptor_chain_1 == None and self.receptor_chain_2 == None:
+        # Get interacting residues
+        # only interface between receptor chain 1 and ligand chain in case the receptor has 2 chains
+        if len(self.receptor_chains) == 1 and self.receptor_chain_1 == None and self.receptor_chain_2 == None:
                 analyzer = InterfaceAnalyzer(
                     pdb_path=self.pdb_path,
                     receptor_chain=self.receptor_chains,
                     ligand_chain=self.ligand_chain,
                 )
-            else:
-                analyzer = InterfaceAnalyzer(
-                    pdb_path=self.pdb_path,
-                    receptor_chain=self.receptor_chain_1,
-                    ligand_chain=self.ligand_chain,
+        else: # receptor has 2 chains
+            analyzer = InterfaceAnalyzer(
+                pdb_path=self.pdb_path,
+                receptor_chain=self.receptor_chain_1,
+                ligand_chain=self.ligand_chain,
                 )
-            interaction_matrix = analyzer.get_interaction_matrix()
-            interaction_matrix_receptor_chain_expanded, interaction_matrix_ligand_chain_expanded \
-                = analyzer.expand_interface(neighborhood=3)
-            interaction_matrix_receptor_chain_expanded_lst, interaction_matrix_ligand_chain_expanded_lst \
+                
+        _ = analyzer.get_interaction_matrix()
+        _ , _ = analyzer.expand_interface(neighborhood=3)
+        interaction_matrix_receptor_chain_expanded_lst, interaction_matrix_ligand_chain_expanded_lst \
                 = analyzer.get_interacting_residues(mode='e')
-            interaction_matrix_receptor_chain_expanded_lst_pele = \
+        interaction_matrix_receptor_chain_expanded_lst_pele = \
                 [f"{item[0]}:{item[1:]}" for item 
                 in interaction_matrix_receptor_chain_expanded_lst]
-            interaction_matrix_ligand_chain_expanded_lst_pele = \
+        interaction_matrix_ligand_chain_expanded_lst_pele = \
                 [f"{item[0]}:{item[1:]}" for item 
                 in interaction_matrix_ligand_chain_expanded_lst]
                 
-            # Adjustments
-            # Json.dumps serves to represent python lists ['A', 'B'...] as json lists ["A", "B"...]
-            content = content.replace("____ligandChainToChange____", self.ligand_chain)
-            content = content.replace("____receptorInteractingRes____", json.dumps(interaction_matrix_receptor_chain_expanded_lst_pele))
-            content = content.replace("____ligandInteractingRes____", json.dumps(interaction_matrix_ligand_chain_expanded_lst_pele))
-            content = content.replace("____pdbNameToChange____", self.pdb_file)
-            content = content.replace("____receptorChainsToChange____", json.dumps(self.receptor_chains))
+        # Adjustments
+        # Json.dumps serves to represent python lists ['A', 'B'...] as json lists ["A", "B"...]
+        content = content.replace("_ligandChainName_", self.ligand_chain)
+        content = content.replace("_RIR_", json.dumps(interaction_matrix_receptor_chain_expanded_lst_pele))
+        content = content.replace("_LIR_", json.dumps(interaction_matrix_ligand_chain_expanded_lst_pele))
+        content = content.replace("_PDB_", self.pdb_file)
         
-            # Remove leading spaces and write content into file
-            content = textwrap.dedent(content)
-            output_path = os.path.join(self.base_dir_control, "peEq.conf")
-            with open(output_path, 'w') as file:
-                file.write(content)
-
-        else: # mode == "diffusion"
-            
-            print("log")
+        if len(self.receptor_chains) == 1:
+            content = content.replace("_receptorChainsNames_", 
+                                      json.dumps(list(self.receptor_chains))) # represent as json list one string
+        else: # receptor has 2 chains
+            content = content.replace("_receptorChainsNames_", json.dumps(self.receptor_chains))
+        
+        # Remove leading spaces and write content into file
+        content = textwrap.dedent(content)
+        output_path = os.path.join(self.base_dir_control, "peEq.conf")
+        with open(output_path, 'w') as file:
+            file.write(content)
 
 
     def create_pele_conf_production(self):
         
-        pass
-
+        # Content for control file
+        content = os.path.join(os.path.dirname(__file__), "pele_templates/peProd.conf")
+        with open(content, "r") as file:
+            content = file.read()
+        
+        # Get interacting residues
+        # only interface between receptor chain 1 and ligand chain in case the receptor has 2 chains
+        if len(self.receptor_chains) == 1 and self.receptor_chain_1 == None and self.receptor_chain_2 == None:
+                analyzer = InterfaceAnalyzer(
+                    pdb_path=self.pdb_path,
+                    receptor_chain=self.receptor_chains,
+                    ligand_chain=self.ligand_chain,
+                )
+        else: # receptor has 2 chains
+            analyzer = InterfaceAnalyzer(
+                pdb_path=self.pdb_path,
+                receptor_chain=self.receptor_chain_1,
+                ligand_chain=self.ligand_chain,
+                )
+                
+        _ = analyzer.get_interaction_matrix()
+        _ , _ = analyzer.expand_interface(neighborhood=3)
+        interaction_matrix_receptor_chain_expanded_lst, interaction_matrix_ligand_chain_expanded_lst \
+                = analyzer.get_interacting_residues(mode='e')
+        interaction_matrix_receptor_chain_expanded_lst_pele = \
+                [f"{item[0]}:{item[1:]}" for item 
+                in interaction_matrix_receptor_chain_expanded_lst]
+        interaction_matrix_ligand_chain_expanded_lst_pele = \
+                [f"{item[0]}:{item[1:]}" for item 
+                in interaction_matrix_ligand_chain_expanded_lst]        
+ 
+        # Adjustments
+        # Json.dumps serves to represent python lists ['A', 'B'...] as json lists ["A", "B"...]
+        content = content.replace("_ligandChainName_", self.ligand_chain)
+        content = content.replace("_RIR_", json.dumps(interaction_matrix_receptor_chain_expanded_lst_pele))
+        content = content.replace("_LIR_", json.dumps(interaction_matrix_ligand_chain_expanded_lst_pele))
+        content = content.replace("_PDB_", self.pdb_file)
+        
+        if len(self.receptor_chains) == 1:
+            content = content.replace("_receptorChainsNames_", 
+                                      json.dumps(list(self.receptor_chains))) # represent as json list one string
+        else: # receptor has 2 chains
+            content = content.replace("_receptorChainsNames_", json.dumps(self.receptor_chains))
+        
+        # Remove leading spaces and write content into file
+        content = textwrap.dedent(content)
+        output_path = os.path.join(self.base_dir_control, "peProd.conf")
+        with open(output_path, 'w') as file:
+            file.write(content)
 
 
 
 if __name__ == "__main__":
     
-    test = PeleBuilder(
-        pdb_path="/home/ibalakfi/Desktop/5C7X.pdb",
-        receptor_chains="H,L",
+    test = PeleSetup(
+        pdb_path="/home/ibalakfi/Desktop/testdiffpele/4POU_b.pdb",
+        receptor_chains="B",
         ligand_chain="A",
         distance_cutOff=12.0,
         mode = "single"
@@ -783,17 +478,38 @@ if __name__ == "__main__":
     
     
     
+    test.create_nbdsuite_input(
+        nCPUs=1
+    )
+    test.create_nbdsuite_runner(
+        suiteJobRunnerName="4p_sui",
+        nCPUs=1
+                                )
+    test.create_equilibration_runner(
+        nCPUs=16,
+        equiJobRunnerName="4p_eq"
+    )
+    test.create_production_runner(
+        nCPUs=64,
+        prodJobRunnerName="4p_prod"
+    )
     
-    #test.create_nbdsuite_input()
-    #test.create_nbdsuite_runner()
-    #test.create_equilibration_runner()
-    #test.create_production_runner()
-    #test.create_control_adaptive_equilibration()
-    #test.create_control_adaptive_production()
+    test.create_control_adaptive_equilibration(
+        outputPathName="outEQ",
+        nEpochs=1,
+        nSteps=40,
+        nCPUs=16
+    )
+    test.create_control_adaptive_production(
+        outputPathName="outPROD",
+        nEpochs=1,
+        nSteps=200,
+        nCPUs=64
+    )
+    
+    
     test.create_pele_conf_equilibration()
     
-    # tests
-    # TODO single mode for 4pou
-    # TODO diffusion model for 4pou
-    # TODO signel model for 5c7x
-    # TODO diffusion model for 5c7x
+    
+    test.create_pele_conf_production()
+    
