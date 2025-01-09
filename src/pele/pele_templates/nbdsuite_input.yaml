@@ -1,0 +1,12 @@
+system_data: pdbs/*.pdb
+cpus: _nCPUs_
+name: processed
+pipeline:
+    - block: topology_extractor
+    - block: pele_pdb_preprocessor
+      options:
+          set_unique_pdb_atom_names: True
+          fix_side_chains: True
+    - block: topology_retriever
+      options:
+          restore_original_names: True
