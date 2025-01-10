@@ -1,1 +1,1 @@
-from .pele import PeleBuilder
+from .pele import PeleSetup
