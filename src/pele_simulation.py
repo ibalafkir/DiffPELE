@@ -18,19 +18,19 @@ def parse_args():
         or diffusion mode."
     pdb_path_h = \
         "Path to the PDB file. Necessary to compute the com_distance metric \
-        of PELE. If using multiple mode, specify one of these systems. If you \
-        are running PELE with diffusion models, specify the original system"
+        of PELE. If using multiple mode, specify one of the multiple systems. If \
+        running PELE with diffusion models, specify the original system"
     receptor_chains_h = \
         "Chains of the receptor. Accepts up to two \
         chains ID (e.g.: H and L antibody chains). \
         Input 2 chains by comma-sepparation."
     ligand_chain_h = \
-        "Chains of the ligand. Accepts up to one"
+        "Chains of the ligand. Accepts only one"
     distance_cutOff_h = \
         "Distance cut-off between the ligand and the receptor. \
         Default value is 12.0 Angstrom."
     mode_h = \
-        "PELE simulation mode. Options: single, multiple. \
+        "PELE simulation mode. Options: single, multiple (or diffusion, here it is the same). \
         Single mode: only one initial system. \
         Multiple mode: multiple initial systems. Used for diffusion \
         models"
@@ -92,6 +92,7 @@ def main(
 
     if mode == 'single':
         
+        # Validate mode
         if multiple_pdb_path is not None:
             raise ValueError(
                 "Multiple PDB path is not required for single mode."
@@ -132,8 +133,9 @@ def main(
         )
         simulation_sys.create_pele_conf_production()
         
-    if mode == 'multiple':
+    if mode == 'multiple' or mode == 'diffusion' or mode == 'dif':
         
+        # Valuidate mode
         if multiple_pdb_path is None:
             raise ValueError(
                 "Specify the path to the folder containing \
@@ -184,7 +186,9 @@ def main(
         )
         simulation_sys.create_pele_conf_production()
         
+        # -----------------------------------------------------------------
         # Once PELE files are generated, several adjustments need to be done
+        # -----------------------------------------------------------------
         
         # Remove the initial systems/PDB in _pele/pdbs and copy those of multiple_pdb_path
         os.remove(
@@ -202,7 +206,7 @@ def main(
                 )
             )
             
-        # Change the PELE directory name to specify it runs at multiple mode
+        # Change the PELE directory name to specify that it runs at multiple mode
         os.rename(
             os.path.abspath(pdb_path)[:-4]+'_pele',
             os.path.abspath(pdb_path)[:-4]+'_dif_pele'
