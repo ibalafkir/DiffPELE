@@ -193,7 +193,7 @@ class PeleSetup:
         self.base_dir_pdbsEQ = self.base_dir+"/pdbsEQ"
         
         # Make directories
-        os.makedirs(self.base_dir, exist_ok=True)
+        os.makedirs(self.base_dir) # stop if exists
         os.makedirs(self.base_dir_pdbs, exist_ok=True)
         os.makedirs(self.base_dir_control, exist_ok=True)
         os.makedirs(self.base_dir_ref, exist_ok=True)
