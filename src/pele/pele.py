@@ -1,11 +1,8 @@
 import os 
-import copy as cp
-from src.utils.pdb_utils import PdbDf, PdbHandler
+from src.utils.pdb_utils import PdbDf
 from src.utils.logger_factory import LoggerFactory
 from src.utils.os_utils import display_full_dataframe
-from src.utils.file_handling import write_yaml_data
 from src.interface import InterfaceAnalyzer
-import argparse
 import textwrap
 import shutil
 import json
@@ -420,53 +417,3 @@ class PeleSetup:
         output_path = os.path.join(self.base_dir_control, "peProd.conf")
         with open(output_path, 'w') as file:
             file.write(content)
-
-
-
-if __name__ == "__main__":
-    
-    test = PeleSetup(
-        pdb_path="/home/ibalakfi/Desktop/testdiffpele/4POU_b.pdb",
-        receptor_chains="B",
-        ligand_chain="A",
-        distance_cutOff=12.0
-    )
-    
-    
-    
-    
-    test.create_nbdsuite_input(
-        nCPUs=1
-    )
-    test.create_nbdsuite_runner(
-        suiteJobRunnerName="4p_sui",
-        nCPUs=1
-                                )
-    test.create_equilibration_runner(
-        nCPUs=16,
-        equiJobRunnerName="4p_eq"
-    )
-    test.create_production_runner(
-        nCPUs=64,
-        prodJobRunnerName="4p_prod"
-    )
-    
-    test.create_control_adaptive_equilibration(
-        outputPathName="outEQ",
-        nEpochs=1,
-        nSteps=40,
-        nCPUs=16
-    )
-    test.create_control_adaptive_production(
-        outputPathName="outPROD",
-        nEpochs=1,
-        nSteps=200,
-        nCPUs=64
-    )
-    
-    
-    test.create_pele_conf_equilibration()
-    
-    
-    test.create_pele_conf_production()
-    
