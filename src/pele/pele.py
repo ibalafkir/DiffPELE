@@ -9,7 +9,6 @@ import argparse
 import textwrap
 import shutil
 import json
-import glob
 
 
 logger = LoggerFactory.get_logger(__name__, "INFO")
@@ -79,7 +78,7 @@ class PeleSetup:
         AdaptivePELE conda environments
         
         Parameters:
-        pdb_path (str): Path to the PDB file.
+        pdb_path (str): Path to the PDB file. Necessary to compute the com_distance metric of PELE.
         receptor_chains (str): Chain ID for the receptor protein chains or chain.
         ligand_chain (str): Chain ID for the ligand protein chain.
         distance_cutOff (float): Distance cut-off for interaction analysis. Default is 12.0.
@@ -100,7 +99,7 @@ class PeleSetup:
         self.ligand_chain = ligand_chain
         self.distance_cutOff = distance_cutOff
         
-        # Set attributes for use in other methods
+        # Define attributes for use in other methods
         self.pdb_code = None
         self.pdb_file = None
         self.base_dir = None
@@ -134,7 +133,7 @@ class PeleSetup:
         if not isinstance(distance_cutOff, float):
             raise TypeError(f"{distance_cutOff} should be a float")
         
-         # Validate PDB
+        # Validate PDB
         if not os.path.exists(pdb_path):
             raise FileNotFoundError(f"File not found: {pdb_path}"
                                     )       
@@ -146,7 +145,7 @@ class PeleSetup:
         atom_df = PdbDf(pdb_path)
         atom_df.get_atoms()
         atom_df_chains = atom_df.get_chains_id()
-        if receptor_chains[0] not in atom_df_chains or receptor_chains[::-1][0] not in atom_df_chains: # since recepotr_chain can be A,B, verifiy if letters in atom_df
+        if receptor_chains[0] not in atom_df_chains or receptor_chains[::-1][0] not in atom_df_chains:
             raise ValueError(f"{receptor_chains} is not a valid chain ID in {pdb_path}")
         if ligand_chain not in atom_df_chains:
             raise ValueError(f"{ligand_chain} is not a valid chain ID in {pdb_path}")
@@ -193,7 +192,7 @@ class PeleSetup:
         self.base_dir_pdbsEQ = self.base_dir+"/pdbsEQ"
         
         # Make directories
-        os.makedirs(self.base_dir) # stop if exists
+        os.makedirs(self.base_dir) # terminate execution if already existing
         os.makedirs(self.base_dir_pdbs, exist_ok=True)
         os.makedirs(self.base_dir_control, exist_ok=True)
         os.makedirs(self.base_dir_ref, exist_ok=True)
