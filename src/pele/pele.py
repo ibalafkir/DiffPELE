@@ -15,15 +15,6 @@ import glob
 logger = LoggerFactory.get_logger(__name__, "INFO")
 display_full_dataframe()
 
-#####
-### TODO:
-
-# remove diff mode
-# releer todo el codigo, comentar variables y eliminar single/diffusion mode. verificar como hago para coger segun que cadena
-
-# hacer script donde considerar single y diff mode. esta clase que solo considere single mode.
-        # para considerar diff mode, lo que haya en pdbs eliminarlo y copiar pdbs del path con diff models
-####
 
 def validate_and_get_chains(receptor_chains, ligand_chain):
     
