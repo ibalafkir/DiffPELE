@@ -69,9 +69,7 @@ class PeleSetup:
         pdb_path: str,
         receptor_chains: str,
         ligand_chain: str,
-        distance_cutOff: float = 12.0,
-        mode: str = "single",
-        diffmodels_path: str = None
+        distance_cutOff: float = 12.0
     ):
         """
         Initialize the PeleSetup class.
@@ -93,8 +91,7 @@ class PeleSetup:
             pdb_path=pdb_path,
             receptor_chains=receptor_chains,
             ligand_chain=ligand_chain,
-            distance_cutOff=distance_cutOff,
-            mode=mode,
+            distance_cutOff=distance_cutOff
         )
         
         # Set attributes
@@ -102,8 +99,6 @@ class PeleSetup:
         self.receptor_chains = receptor_chains
         self.ligand_chain = ligand_chain
         self.distance_cutOff = distance_cutOff
-        self.mode = mode
-        self.diffmodels_path = diffmodels_path
         
         # Set attributes for use in other methods
         self.pdb_code = None
@@ -123,17 +118,14 @@ class PeleSetup:
         pdb_path: str,
         receptor_chains: str,
         ligand_chain: str,
-        distance_cutOff: float,
-        mode: str,
-        diffmodels_path: str = None
+        distance_cutOff: float
     ):
         
         # Validate string inputs
         for var_name, var_value in [
             ("pdb_path", pdb_path),
             ("receptor_chains", receptor_chains),
-            ("ligand_chain", ligand_chain),
-            ("mode", mode)
+            ("ligand_chain", ligand_chain)
             ]:
             if not isinstance(var_value, str):
                 raise TypeError(f"{var_name} should be a string")
@@ -149,29 +141,6 @@ class PeleSetup:
         # Validate distance cut-off
         if distance_cutOff <= 0:
             raise ValueError(f"{distance_cutOff} should be positive")
-        
-        # Validate mode
-        if mode not in ["single", "diffusion"]:
-            raise ValueError(f"{mode} is not a valid mode. Choose 'single' or 'diffusion'")
-        
-        if mode == "single" and diffmodels_path is not None:
-            raise ValueError("diff_path_models is not required for mode 'single' since you \
-                              are running a single system")       
-        if mode == "diffusion" and diffmodels_path is None:
-            raise ValueError("diff_path_models is required for mode 'diffusion'")
-                
-        # Validate diffmodels_path
-        if diffmodels_path != None and not isinstance(diffmodels_path, str):
-            raise TypeError(f"{diffmodels_path} must be a string")
-        if mode == "diffusion":
-            if not os.path.exists(diffmodels_path):
-                raise FileNotFoundError(f"File not found: {diffmodels_path}, required for mode 'diffusion'")
-            diffmodels_path_files = glob.glob(os.path.join(diffmodels_path, "*.pdb"))
-            if len(diffmodels_path_files) == 0:
-                raise FileNotFoundError(f"No PDB files found in {diffmodels_path}")
-            
-            if len(diffmodels_path_files) > 0 and len(diffmodels_path_files) != 2:
-                raise ValueError(f"The current diffusion mode expects to run with 40 systems.") # TODO change in future
         
         # Validate chains in PDB
         atom_df = PdbDf(pdb_path)
@@ -231,9 +200,8 @@ class PeleSetup:
         os.makedirs(self.base_dir_pdbsEQ, exist_ok=True)
         
         # Copy input PDB file to base_dir/pdbs (PELE runners will look for PDBs there)
-        if self.mode == "single":
-            shutil.copy(self.pdb_path, self.base_dir_pdbs)
-            shutil.copy(self.pdb_path, self.base_dir_ref)
+        shutil.copy(self.pdb_path, self.base_dir_pdbs)
+        shutil.copy(self.pdb_path, self.base_dir_ref)
                 
 
     def create_nbdsuite_runner(self, suiteJobRunnerName, nCPUs):
@@ -462,8 +430,7 @@ if __name__ == "__main__":
         pdb_path="/home/ibalakfi/Desktop/testdiffpele/4POU_b.pdb",
         receptor_chains="B",
         ligand_chain="A",
-        distance_cutOff=12.0,
-        mode = "single"
+        distance_cutOff=12.0
     )
     
     
