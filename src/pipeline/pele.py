@@ -2,7 +2,7 @@ import os
 from src.utils.pdb_utils import PdbDf
 from src.utils.logger_factory import LoggerFactory
 from src.utils.os_utils import display_full_dataframe
-from src.interface import InterfaceAnalyzer
+from src.pipeline.interface import InterfaceAnalyzer
 import textwrap
 import shutil
 import json

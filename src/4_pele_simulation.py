@@ -1,7 +1,7 @@
 from utils.pdb_utils import PdbDf, PdbHandler
 from utils.logger_factory import LoggerFactory
 from utils.os_utils import display_full_dataframe
-from pele import PeleSetup
+from pipeline.pele import PeleSetup
 import argparse
 import shutil
 import os
