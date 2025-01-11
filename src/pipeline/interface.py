@@ -45,12 +45,13 @@ class InterfaceAnalyzer:
         distance_cutOff (float): Distance cut-off for interaction analysis. Default is 12.0.
         """
 
+        # Set attributes
         self.pdb_path = pdb_path
         self.receptor_chain = receptor_chain
         self.ligand_chain = ligand_chain
         self.distance_cutOff = distance_cutOff
         
-        # Used later as outputs
+        # Define attributes for later use
         self.interaction_matrix = None
         self.atom_df_CA_receptor_chain_re = None
         self.atom_df_CA_ligand_chain_re = None
