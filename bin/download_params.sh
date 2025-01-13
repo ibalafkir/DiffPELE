@@ -1,5 +1,7 @@
 #!/bin/bash
  
+# Download RFdiffusion model paremeter weights. 
+
 # Usage: bash download_params.sh /path/to/download/directory
 
 # ----------------------------------------------------------
