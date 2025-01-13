@@ -60,7 +60,7 @@ head reports_snapshots_BE_filtered_TE.txt -n 1 > snapshotOfInterest.txt
 echo "This is the selected pose:"
 cat snapshotOfInterest.txt
 
-# Getting equilibrated PDB model by looking for
+# Getting equilibrated PDB model by looking for the snapshot using values from the last 3 metrics (V6-8)
 acceptedStep=$(cat snapshotOfInterest.txt | awk '{print $3}')
 N_MODEL=$((acceptedStep + 1)) # Models start by 1 and acceptedSteps by 0
 V6=$(cat snapshotOfInterest.txt | awk '{print $6}')

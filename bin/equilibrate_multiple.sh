@@ -86,7 +86,7 @@ fi
 # currently: only keeping top 33% in TE of the 40 equilibrated systems (i.e. 13)
 sort -n -k 4,4 equilibratedSnapshots.txt | head -n 13 > equilibratedSnapshots_F.txt
 
-# Getting equilibrated PDB models
+# Getting equilibrated PDB models by looking for the snapshot using values from the last 3 metrics (V6-8)
 
 OUT="equilibratedSnapshots_F.txt"
 
