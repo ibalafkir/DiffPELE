@@ -356,7 +356,7 @@ class InterfaceAnalyzer:
         
 ############################################################################################################################################################
 
-# Parsing args and main call for THIS script
+# Parsing args and main call for THIS script, which pretends to analyze the interface between 2 given chains of a system
     
 def parse_args():
     
