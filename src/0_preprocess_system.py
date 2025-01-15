@@ -51,8 +51,10 @@ def main(pdb_path, receptor_chains, ligand_chain):
     logger.info(f"Parsing completed for the pipeline preprocessor: {os.path.realpath(pdb_path)}")
 
     # Validate and get chains
-    chains_to_keep = validate_and_get_chains(receptor_chains, ligand_chain)
+    chains_to_keep, receptor_chains, ligand_chains = validate_and_get_chains(receptor_chains, ligand_chain)
     logger.info(f"Chains to keep: {chains_to_keep}")
+    logger.info(f"      - Receptor chains: {receptor_chains[0]} and {receptor_chains[1]}")
+    logger.info(f"      - Receptor chains: {ligand_chains}")
     
     # Create preprocessing directory and copy input pdb file
     pdb_path = os.path.realpath(pdb_path) # Make sure the path is absolute
