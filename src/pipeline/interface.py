@@ -446,7 +446,7 @@ def main(
     # Log the results
     logger.info("The interacting residues for chain 1 are: %s", interaction_matrix_receptor_chain_expanded_lst)
     logger.info("The interacting residues for chain 2 are: %s", interaction_matrix_ligand_chain_expanded_lst)
-    logger.info("The pymol automatic selection is: %s", pymol_selection)
+    logger.info("Run this command in the pymol command line to select residues from the interface: %s", pymol_selection)
     logger.info(f"The interaction matrix has been saved to {pdb_path[:-4]}_interaction_matrix.csv")
     logger.info(f"The expanded interaction matrix has been saved to {pdb_path[:-4]}_interaction_matrix_expanded.csv")
     
