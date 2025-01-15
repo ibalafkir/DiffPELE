@@ -5,7 +5,6 @@ import copy as cp
 from src.utils.pdb_utils import PdbDf, PdbHandler
 from src.utils.logger_factory import LoggerFactory
 from src.utils.os_utils import display_full_dataframe
-from src.utils.file_handling import write_yaml_data
 import argparse
 
 
