@@ -21,6 +21,8 @@ def validate_and_get_chains(receptor_chains, ligand_chain):
 
     Returns:
     chains_to_keep (list): List of chains to keep in the PDB file
+    receptor_chains (str or list): String for one chain, list for two
+    ligand_chain (str): Ligand chain
     """
 
     # Validate input chains
@@ -46,7 +48,7 @@ def validate_and_get_chains(receptor_chains, ligand_chain):
         chains_to_keep.append(receptor_chains[1])
         chains_to_keep.append(ligand_chain)
 
-    return chains_to_keep
+    return chains_to_keep, receptor_chains, ligand_chain
 
 
 class PdbDf:
