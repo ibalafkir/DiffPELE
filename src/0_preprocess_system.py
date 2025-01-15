@@ -1,4 +1,4 @@
-from utils.pdb_utils import PdbDf, PdbHandler
+from utils.pdb_utils import PdbDf, PdbHandler, validate_and_get_chains
 from utils.logger_factory import LoggerFactory
 from utils.os_utils import display_full_dataframe
 import argparse
@@ -42,35 +42,6 @@ def parse_args():
                         help=ligand_chain_h)
     
     return parser.parse_args()
-
-
-def validate_and_get_chains(receptor_chains, ligand_chain):
-    
-    
-    # Validate input chains
-    if len(ligand_chain) > 1:
-        raise ValueError("Only one ligand chain is allowed.")
-    if len(receptor_chains) == 0:
-        raise ValueError("At least one receptor chain must be inputted.")
-    if len(ligand_chain) == 0:
-        raise ValueError("At least one ligand chain must be inputted.")
-    if len(receptor_chains) == 2 and ',' not in receptor_chains:
-            raise ValueError("If two receptor chains are inputted, separate them with a comma.")
-    if len(receptor_chains) > 3 and ',' in receptor_chains:
-        raise ValueError("Only two receptor chains are allowed.")
-    
-    # Get chains to keep
-    chains_to_keep = []
-    if len(receptor_chains) == 1:
-        chains_to_keep.append(receptor_chains)
-        chains_to_keep.append(ligand_chain)
-    else: # len(receptor_chains) == 3
-        receptor_chains = receptor_chains.split(',')
-        chains_to_keep.append(receptor_chains[0])
-        chains_to_keep.append(receptor_chains[1])
-        chains_to_keep.append(ligand_chain)
-    
-    return chains_to_keep
     
     
 def main(pdb_path, receptor_chains, ligand_chain):
