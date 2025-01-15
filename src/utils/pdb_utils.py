@@ -7,50 +7,6 @@ from pdbtools import pdb_fixinsert, pdb_tidy, pdb_selatom, pdb_sort, pdb_reatom,
 import os
 
 
-def validate_and_get_chains(receptor_chains, ligand_chain):
-
-    """
-    Validate and get the chains to keep in the PDB file.
-
-    Parameters:
-    receptor_chains (str): Chain ID for the receptor protein chains.
-                           Accepts one chain: 'A'
-                           or 2 comma-sepparated: 'B'
-    ligand_chain (str): Chain ID for the ligand protein chain.
-                        Accepts one chain only
-
-    Returns:
-    chains_to_keep (list): List of chains to keep in the PDB file
-    receptor_chains (str or list): String for one chain, list for two
-    ligand_chain (str): Ligand chain
-    """
-
-    # Validate input chains
-    if len(ligand_chain) > 1:
-        raise ValueError("Only one ligand chain is allowed.")
-    if len(receptor_chains) == 0:
-        raise ValueError("At least one receptor chain must be inputted.")
-    if len(ligand_chain) == 0:
-        raise ValueError("At least one ligand chain must be inputted.")
-    if len(receptor_chains) == 2 and ',' not in receptor_chains:
-            raise ValueError("If two receptor chains are inputted, separate them with a comma.")
-    if len(receptor_chains) > 3 and ',' in receptor_chains:
-        raise ValueError("Only two receptor chains are allowed.")
-
-    # Get chains to keep
-    chains_to_keep = []
-    if len(receptor_chains) == 1:
-        chains_to_keep.append(receptor_chains)
-        chains_to_keep.append(ligand_chain)
-    else: # len(receptor_chains) == 3, meaning
-        receptor_chains = receptor_chains.split(',')
-        chains_to_keep.append(receptor_chains[0])
-        chains_to_keep.append(receptor_chains[1])
-        chains_to_keep.append(ligand_chain)
-
-    return chains_to_keep, receptor_chains, ligand_chain
-
-
 class PdbDf:
     """
     Manipulates PDB files using Pandas DataFrames.
