@@ -19,7 +19,7 @@ class PeleSetup:
         pdb_path: str,
         receptor_chains: str,
         ligand_chain: str,
-        distance_cutOff: float = 12.0
+        distance_cutOff: float
     ):
         """
         Initialize the PeleSetup class.
@@ -274,6 +274,7 @@ class PeleSetup:
         with open(content, "r") as file:
             content = file.read()        
 
+        # TODO for developers: determining if there is one or 2 chains in receptor could be done with validate_and_get_chains
         # Get interacting residues
         # only interface between receptor chain 1 and ligand chain in case the receptor has 2 chains.
         # if the receptor is an antibody, input the heavy chain
@@ -330,6 +331,7 @@ class PeleSetup:
         
         # Get interacting residues
         # only interface between receptor chain 1 and ligand chain in case the receptor has 2 chains
+        # TODO for developers: determining if there is one or 2 chains in receptor could be done with validate_and_get_chains
         if len(self.receptor_chains) == 1 and self.receptor_chain_1 == None and self.receptor_chain_2 == None:
                 analyzer = InterfaceAnalyzer(
                     pdb_path=self.pdb_path,

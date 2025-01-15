@@ -404,7 +404,7 @@ def main(
     pdb_path: str,
     receptor_chain: str,
     ligand_chain: str,
-    distance_cutOff: float = 12.0
+    distance_cutOff: float
     ):
     
     # Initialize the InterfaceAnalyzer class
