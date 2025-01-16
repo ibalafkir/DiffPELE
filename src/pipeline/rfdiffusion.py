@@ -60,7 +60,8 @@ class RFdiffContigs:
             self.receptor_chain_2 = self.receptor_chains[1]
     
     
-    def _validate_inputs(pdb_path, 
+    def _validate_inputs(self,
+                         pdb_path, 
                          receptor_chains, 
                          ligand_chain, 
                          distance_cutOff):
