@@ -372,7 +372,6 @@ class RFdiffContigs:
                 
             # Build contig
             contigs = f"[{contigs_1}0 {contigs_2[:-1]}]"
-            print(contigs)
         
         # 3 chains ergo 2 interfaces 
         # ------------------------
@@ -443,7 +442,7 @@ class RFdiffContigs:
             
             # Build            
             contigs = f"[{first}0 {second}0 {third[:-1]}]"          
-            print(contigs)
+
         return contigs
 
 
@@ -523,9 +522,10 @@ def main(
             ligand_chain=ligand_chain,
             distance_cutOff=distance_cutOff
     )
-        
     contigs = contigs.get_contigs()
-        
+    logger.info(f"The contigs code for the system {args.pdb_path} are:")
+    print(contigs)
+    
     return contigs
 
 
