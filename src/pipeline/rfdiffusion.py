@@ -605,7 +605,7 @@ class RFdiffSetUp:
 
 
 ############################################################################################################################################################
-
+# TODO REMOVE
 # Parsing args and main call for THIS script
 
 
@@ -689,12 +689,17 @@ def main(
 
 if __name__ == '__main__':
     
+    
     args = parse_args()
-    main(
-        pdb_path = args.pdb_path,
-        receptor_chains = args.receptor_chain,
-        ligand_chain = args.ligand_chain,
-        distance_cutOff = args.distance_cutOff
+    main(args.pdb_path, args.receptor_chain, args.ligand_chain, args.distance_cutOff)
+    
+
+    # For developers: this is how you would run make_runner
+    """
+    runner_maker = RFdiffSetUp(
+        pdb_path='/home/ibalakfi/Desktop/testdiffpele/4POU_b.pdb',
+        run_inference_path="/gpfs/projects/bsc72/Repos/RFdiffusion/scripts/run_inference.py"
     )
     
-    
+    runner_maker.make_runner()
+    """
