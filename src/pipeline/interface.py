@@ -58,6 +58,8 @@ class InterfaceAnalyzer:
         self.interaction_ligand_chain_df = None     
         
         # Validate inputs
+        # TODO this needs to be done before setting attributes
+        # Change and test the test cases
         self._validate_inputs(
             pdb_path=pdb_path,
             receptor_chain=receptor_chain,
