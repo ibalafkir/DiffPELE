@@ -38,7 +38,12 @@ class RFdiffContigs:
         """
         
         # Validate inputs
-        
+        self._validate_inputs(
+            pdb_path,
+            receptor_chains,
+            ligand_chain,
+            distance_cutOff
+        )
         
         # Set attributes
         self.pdb_path = pdb_path
