@@ -452,6 +452,158 @@ class RFdiffContigs:
         return contigs
 
 
+class RFdiffSetUp:
+
+    def __init__(self,
+                 pdb_path: str,
+                 run_inference_path: str = "/gpfs/projects/bsc72/Repos/RFdiffusion/scripts/run_inference.py"
+                 ):
+        
+        """
+        Initialize the RFdiffSetUp class.
+        This class pretends to generate the runner for RFdiffusion (partial diffusion)
+        This runner is adapted to be used in our cluster MareNostrum V
+        
+        Parameters:
+        pdb_path (str): Path to the PDB file.
+        run_inference_path (str): Path to the run_inference.py script from RFdiffusion
+        """
+        
+        # Validate inputs
+        self._validate_inputs(pdb_path, 
+                              run_inference_path)
+        
+        # Set attributes
+        self.pdb_path = pdb_path
+        self.run_inference_path = run_inference_path
+
+    def _validate_inputs(
+        self,
+        pdb_path: str,
+        run_inference_path: str
+    ):
+        
+        # Validate string inputs
+        for var_name, var_value in [
+            ("pdb_path", pdb_path),
+            ("run_inference_path", run_inference_path)
+            ]:
+            if not isinstance(var_value, str):
+                raise TypeError(f"{var_name} should be a string")
+        
+        # Validate PDB
+        if not os.path.exists(pdb_path):
+            raise FileNotFoundError(f"File not found: {pdb_path}")
+        #if not os.path.exists(run_inference_path):
+         #   raise FileNotFoundError(f"File not found: {run_inference_path}")
+    
+    def make_runner(self):
+        
+        """
+        Build RFdiffusion partial diffusion runner for MNV
+        
+        Returns:
+        runner_path (str): Path to the runner script
+        """
+        
+        content = r"""
+        #!/bin/bash
+        #SBATCH --job-name diff
+        #SBATCH -D .
+        #SBATCH --output=logs/%x_%j.out
+        #SBATCH --error=logs/%x_%j.err
+        #SBATCH --ntasks=1
+        #SBATCH --cpus-per-task=20
+        #SBATCH --gres=gpu:1
+        #SBATCH --time=02:00:00
+        #SBATCH --qos=acc_bscls
+        #SBATCH --nodes=1
+        #SBATCH --account=bsc72
+
+        # Environment stuff
+        module load anaconda/2024.02
+        source activate RFDiffusion
+
+        # Parameters
+        complex_pdb=__PDB__ # PDB hbond-opt, relaxed, fixed (removed insertions)
+        run_inference=__RINF__ # Run inference path
+
+        # Organize dir
+        sys_basename=$(basename "$complex_pdb" .pdb)
+        w_dir=$(dirname "$complex_pdb")
+        contigs_file="${w_dir}/${sys_basename}_contigs.txt"
+        out_prefix_noise0="${w_dir}/${sys_basename}_diff/N0/${sys_basename}_diff_N0"
+        out_prefix_noise05="${w_dir}/${sys_basename}_diff/N05/${sys_basename}_diff_N05"
+        out_prefix_noise075="${w_dir}/${sys_basename}_diff/N075/${sys_basename}_diff_N075"
+        out_prefix_noise1="${w_dir}/${sys_basename}_diff/N1/${sys_basename}_diff_N1"
+
+        # RFdiffusion stuff
+        n_structs=10
+        n_diff_iter=20
+        fix_contigs=$(cat ${contigs_file})
+        seq_cov="[0-710]" # Selects all aminoacids to keep seq (it doesn't complain if this selection is longer)
+        echo Partial Diffusion for $sys_basename
+        echo Reading contigs file $contigs_file
+
+        # No Noise
+        ${run_inference} inference.input_pdb=$complex_pdb \
+                         inference.output_prefix=$out_prefix_noise0 \
+                         "contigmap.contigs=$fix_contigs" \
+                         "contigmap.provide_seq=$seq_cov" \
+                         inference.num_designs=$n_structs \
+                         denoiser.noise_scale_ca=0 \
+                         denoiser.noise_scale_frame=0 \
+                         diffuser.partial_T=$n_diff_iter
+
+        #  Noisy
+        ${run_inference} inference.input_pdb=$complex_pdb \
+                         inference.output_prefix=$out_prefix_noise05 \
+                         "contigmap.contigs=$fix_contigs" \
+                         "contigmap.provide_seq=$seq_cov" \
+                         inference.num_designs=$n_structs \
+                         denoiser.noise_scale_ca=0.5 \
+                         denoiser.noise_scale_frame=0.5 \
+                         diffuser.partial_T=$n_diff_iter
+
+        #  Noisy
+        ${run_inference} inference.input_pdb=$complex_pdb \
+                         inference.output_prefix=$out_prefix_noise075 \
+                         "contigmap.contigs=$fix_contigs" \
+                         "contigmap.provide_seq=$seq_cov" \
+                         inference.num_designs=$n_structs \
+                         denoiser.noise_scale_ca=0.75 \
+                         denoiser.noise_scale_frame=0.75 \
+                         diffuser.partial_T=$n_diff_iter
+
+        #  Noisy
+        ${run_inference} inference.input_pdb=$complex_pdb \
+                         inference.output_prefix=$out_prefix_noise1 \
+                         "contigmap.contigs=$fix_contigs" \
+                         "contigmap.provide_seq=$seq_cov" \
+                         inference.num_designs=$n_structs \
+                         denoiser.noise_scale_ca=1.0 \
+                         denoiser.noise_scale_frame=1.0 \
+                         diffuser.partial_T=$n_diff_iter
+
+        # Copy all diffusion models
+        diff_dir="${w_dir}/${sys_basename}_diffModels"
+        mkdir -p $diff_dir
+
+        cp ${w_dir}/${sys_basename}_diff/N0/*pdb $diff_dir
+        cp ${w_dir}/${sys_basename}_diff/N05/*pdb $diff_dir
+        cp ${w_dir}/${sys_basename}_diff/N075/*pdb $diff_dir
+        cp ${w_dir}/${sys_basename}_diff/N1/*pdb $diff_dir
+        """
+        content = textwrap.dedent(content)
+
+        content = content.replace("__PDB__", os.path.abspath(self.pdb_path))
+        content = content.replace("__RINF__", os.path.abspath(self.run_inference_path))
+        
+        return content        
+
+
+
+
 ############################################################################################################################################################
 
 # Parsing args and main call for THIS script
