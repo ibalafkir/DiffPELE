@@ -506,7 +506,7 @@ class RFdiffSetUp:
         
         content = r"""
         #!/bin/bash
-        #SBATCH --job-name diff
+        #SBATCH --job-name __DJRN__
         #SBATCH -D .
         #SBATCH --output=logs/%x_%j.out
         #SBATCH --error=logs/%x_%j.err
@@ -597,6 +597,7 @@ class RFdiffSetUp:
 
         content = content.replace("__PDB__", os.path.abspath(self.pdb_path))
         content = content.replace("__RINF__", os.path.abspath(self.run_inference_path))
+        content = content.replace("__DJRN__", os.path.basename(self.pdb_path)[:-4]+'_diff')
         
         return content        
 
