@@ -23,19 +23,20 @@ def parse_args():
         "Path to the PDB file. Necessary for both generation RFdiffusion runner and \
         diffusion models correction"
     receptor_chains_h = \
-        "Chains of the receptor. Accepts up to two  chains ID (e.g.: H and L antibody chains). \
-        Input 2 chains by comma-sepparation."
+        "Chains of the receptor. Accepts up to two chains ID (e.g.: H and L antibody chains). \
+        Input 2 chains by comma-sepparation. Not necessary if running the script in fix mode."
     ligand_chain_h = \
-        "Chains of the ligand. Accepts only one"
+        "Chains of the ligand. Accepts only one. Not necessary if running the script in fix mode."
     distance_cutOff_h = \
         "Distance cut-off between the ligand and the receptor. \
-        Default value is 12.0 Angstrom."
+        Default value is 12.0 Angstrom. Not necessary if running the script in fix mode."
     run_inference_path_h = \
-        "Path to the run_inference RFdiffusion script."
+        "Path to the run_inference RFdiffusion script. \
+        Not necessary if running the script in fix mode."
     diffusion_models_input = \
         "Path to the diffusion models (path/to/diffusion_models/) OR \
         a single diffusion model (path/to/diffusion_model.pdb). This is \
-        automatically handled by the class."
+        automatically handled by the class. Not necessary if running the script in setup mode."
 
     parser = argparse.ArgumentParser(description = script_desc)
     
@@ -52,14 +53,19 @@ def parse_args():
     parser.add_argument('--receptor_chains',
                         '-rc', 
                         type=str, 
+                        required=False,
+                        default=None,
                         help=receptor_chains_h)
     parser.add_argument('--ligand_chain',
                         '-lc',
                         type=str, 
+                        required=False,
+                        default=None,
                         help=ligand_chain_h)
     parser.add_argument('--distance_cutOff',
                         '-dc',
                         type=float, 
+                        required=False, 
                         default=12.0,
                         help=distance_cutOff_h)
     parser.add_argument('--run_inference_path',
@@ -83,13 +89,26 @@ def main(
     receptor_chains: str,
     ligand_chain: str,
     distance_cutOff: float,
-    run_inference_path: str = None,
-    diffusion_models_input: str = None
+    run_inference_path: str,
+    diffusion_models_input: str
 ):
     
     if mode == 'setup':
         
         logger.info("Setting up the RFdiffusion runner.")
+        
+        # Small input validation
+        if pdb_path is None:
+            raise ValueError("PDB path is necessary for the setup mode.")
+        if receptor_chains is None or ligand_chain is None:
+            raise ValueError("Receptor and ligand chains are necessary for the setup mode.")
+        if distance_cutOff is None:
+            raise ValueError("Distance cut-off is necessary for the setup mode.")
+        if run_inference_path is None:
+            raise ValueError("Path to the run_inference script is necessary for the setup mode.")
+        
+        if diffusion_models_input is not None:
+            logger.warning("Diffusion models input is not necessary for the setup mode.")
         
         # Organize directory
         path_to_pdb = os.path.abspath(pdb_path)        
@@ -124,12 +143,42 @@ def main(
     elif mode == 'fix':
 
         logger.info("Fixing the RFdiffusion output.")
+        
+        # Small input validation
+        if pdb_path is None:
+            raise ValueError("PDB path is necessary for the fix mode.")
+        if diffusion_models_input is None:
+            raise ValueError("Diffusion models input is necessary for the fix mode.")
+        for i in [
+            receptor_chains,
+            ligand_chain,
+            distance_cutOff,
+            run_inference_path
+        ]:
+            if i is not None:
+                logger.warning(f"Input {i} is not necessary for the fix mode, but it does not affect correction")
 
+        # Correct diffusion models, output is in the same directory as diffusion models
         diffusion_models_correction = RFdiffFix(
-            pdb_path = pdb_path,
+            original_pdb_path = pdb_path,
             diffusion_models_input = diffusion_models_input
         )
+        diffusion_models_correction.correct_diff_models()
         
+        # Make directory for the corrected diffusion models
+        diffusion_models_input_path = os.path.dirname(diffusion_models_input)
+        diffusion_models_input_name = os.path.basename(diffusion_models_input)
+        fix_diffusion_models_path = os.path.join(diffusion_models_input_path, diffusion_models_input_name+"_fix")
+        os.makedirs(fix_diffusion_models_path, exist_ok=True)
+        
+        # Move corrected PDBs to new directory
+        items = os.listdir(diffusion_models_input)
+        pdbs_to_move = [os.path.join(diffusion_models_input,pdb) for pdb in items if pdb.endswith('_fix.pdb')]
+        for pdb in pdbs_to_move:
+            shutil.move(pdb, fix_diffusion_models_path)
+        
+    else:
+        raise ValueError("Mode not recognized. Please choose between 'setup' or 'fix'.")
 
 if __name__ == "__main__":
 
@@ -146,8 +195,5 @@ if __name__ == "__main__":
 
 
         
-        # TODO For developers
-        # check if succesful run: /gpfs/scratch/bsc72/ismael/projects/run_tests/diftest/dif
-        # do mode==fix
-        # test on 4pou and 5c7x
+
         
