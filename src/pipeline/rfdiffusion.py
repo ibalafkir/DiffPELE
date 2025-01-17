@@ -424,28 +424,28 @@ class RFdiffContigs:
             pdb = PdbDf(self.pdb_path)
             _ = pdb.get_atoms()
             chains_ordered = pdb.get_chains_id()           
-            
-            if chains_input[0] in contigs_1:
+        
+            if chains_ordered[0] in contigs_1:
                 first = contigs_1
-            elif chains_input[0] in contigs_2:
+            if chains_ordered[0] in contigs_2:
                 first = contigs_2
-            elif chains_input[0] in contigs_3:
-                first = contigs_3           
-            if chains_input[1] in contigs_1:
+            if chains_ordered[0] in contigs_3:
+                first = contigs_3
+            if chains_ordered[1] in contigs_1:
                 second = contigs_1
-            elif chains_input[1] in contigs_2:
+            if chains_ordered[1] in contigs_2:
                 second = contigs_2
-            elif chains_input[1] in contigs_3:
-                second = contigs_3    
-            if chains_input[2] in contigs_1:
+            if chains_ordered[1] in contigs_3:
+                second = contigs_3
+            if chains_ordered[2] in contigs_1:
                 third = contigs_1
-            elif chains_input[2] in contigs_2:
+            if chains_ordered[2] in contigs_2:
                 third = contigs_2
-            elif chains_input[2] in contigs_3:
-                third = contigs_3    
+            if chains_ordered[2] in contigs_3:
+                third = contigs_3
             
             # Build            
-            contigs = f"[{first}0 {second}0 {third[:-1]}]"          
+            contigs = f"[{first}0 {second}0 {third[:-1]}]"     
 
         return contigs
 
