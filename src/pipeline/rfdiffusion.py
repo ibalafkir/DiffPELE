@@ -539,7 +539,7 @@ class RFdiffSetUp:
         n_structs=10
         n_diff_iter=20
         fix_contigs=$(cat ${contigs_file})
-        seq_cov="[0-710]" # Selects all aminoacids to keep seq (it doesn't complain if this selection is longer)
+        seq_cov="[0-1000]" # Selects all aminoacids to keep seq (it doesn't complain if this selection is longer)
         echo Partial Diffusion for $sys_basename
         echo Reading contigs file $contigs_file
 
@@ -593,6 +593,7 @@ class RFdiffSetUp:
         cp ${w_dir}/${sys_basename}_diff/N1/*pdb $diff_dir
         """
         content = textwrap.dedent(content)
+        content = content.lstrip("\n")
 
         content = content.replace("__PDB__", os.path.abspath(self.pdb_path))
         content = content.replace("__RINF__", os.path.abspath(self.run_inference_path))
