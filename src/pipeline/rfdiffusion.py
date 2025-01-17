@@ -1,12 +1,10 @@
 import os 
-from src.utils.pdb_utils import PdbDf
+from src.utils.pdb_utils import PdbDf, PdbHandler
 from src.utils.logger_factory import LoggerFactory
 from src.utils.os_utils import display_full_dataframe
 from src.pipeline.interface import InterfaceAnalyzer
-import argparse
+from biopandas.pdb import PandasPdb
 import textwrap
-import shutil
-import json
 
 
 logger = LoggerFactory.get_logger(__name__, "INFO")
@@ -600,4 +598,146 @@ class RFdiffSetUp:
         content = content.replace("__RINF__", os.path.abspath(self.run_inference_path))
         
         return content        
+
+
+class RFdiffFix:
+    
+    def __init__(
+                self, 
+                original_pdb_path: str, 
+                diffusion_models_input: str
+                ):
+        """
+        Correct PDB format of diffusion models according
+        to the original input. It re-adds chain IDs and 
+        residue numbers.
+        
+        Parameters:
+        original_pdb_path (str): Path to the original PDB file.
+        diffusion_models_input (str): Path to the diffusion models (path/to/diffusion_models/)
+                                      OR
+                                      a single diffusion model (path/to/diffusion_model.pdb)
+                                      This is automatically handled by the class.
+        """
+        # Validate inputs
+        self._validate_inputs(original_pdb_path, diffusion_models_input)
+        
+        # Set attributes
+        self.original_pdb_path = original_pdb_path
+        self.diffusion_models_input = diffusion_models_input
+    
+    
+    def _validate_inputs(
+        self,
+        original_pdb_path: str,
+        diffusion_models_input: str
+    ):
+            
+        # Validate string inputs
+        for var_name, var_value in [
+            ("original_pdb_path", original_pdb_path),
+            ("diffusion_models_input", diffusion_models_input)
+            ]:
+            if not isinstance(var_value, str):
+                raise TypeError(f"{var_name} should be a string")
+            
+        # Validate PDB
+        if not os.path.exists(original_pdb_path):
+            raise FileNotFoundError(f"File not found: {original_pdb_path}")
+        if diffusion_models_input.endswith('.pdb'):
+            if not os.path.exists(diffusion_models_input):
+                raise FileNotFoundError(f"File not found: {diffusion_models_input}")
+        if diffusion_models_input.endswith('.pdb') == False:
+            if not os.path.exists(diffusion_models_input):
+                raise FileNotFoundError(f"Directory not found: {diffusion_models_input}")
+
+
+    def correct_diff_models(self):
+
+        
+        if self.diffusion_models_input.endswith('.pdb'): # the input is a single pdb file
+            
+            logger.info("Correcting a single diffusion model")
+            
+            # Reduce original PDB to backbone atoms
+            PdbHandler.get_backbone(self.original_pdb_path)
+            PdbHandler.get_atom(self.original_pdb_path[:-4]+'_backbone.pdb')
+            
+            # Read as PDB dataframe original and diffusion PDB
+            original_pdb_backbone_atoms_df = PdbDf(self.original_pdb_path[:-4]+'_backbone_atom.pdb').get_atoms()
+            diffusion_model_atoms_df = PdbDf(self.diffusion_models_input).get_atoms()
+            
+            if len(original_pdb_backbone_atoms_df) != len(diffusion_model_atoms_df):
+                raise ValueError(f"Original PDB and diffusion model have different number of atoms: \
+                                {len(original_pdb_backbone_atoms_df)} vs {len(diffusion_model_atoms_df)}")
+            
+            # Now the diffusion model and original system have the same atom lines in the same order, thus
+            # chain ids and residue numbers can be added to the diffusion model(s)
+            diffusion_model_atoms_df['chain_id'] = original_pdb_backbone_atoms_df['chain_id']
+            diffusion_model_atoms_df['residue_number'] = original_pdb_backbone_atoms_df['residue_number']
+            
+            # Write to PDB
+            diffusion_model_fix = PandasPdb().read_pdb(self.diffusion_models_input)
+            diffusion_model_fix.df['ATOM'] = diffusion_model_atoms_df
+            diffusion_model_fix.to_pdb(path= self.diffusion_models_input[:-4]+'_tmpfix.pdb', records = ['ATOM'], gz=False)  
+            
+            # The resulting PDB needs TER and END lines
+            PdbHandler.tidy(self.diffusion_models_input[:-4]+'_tmpfix.pdb')
+            
+            # Remove temporal files
+            for i in [
+                self.original_pdb_path[:-4]+'_backbone.pdb',
+                self.original_pdb_path[:-4]+'_backbone_atom.pdb',
+                self.diffusion_models_input[:-4]+'_tmpfix.pdb'
+                ]:
+                os.remove(i)
+            
+            # Rename the fixed diffusion model
+            os.rename(
+                self.diffusion_models_input[:-4]+'_tmpfix_tidied.pdb',
+                self.diffusion_models_input[:-4]+'_fix.pdb'
+            )
+    
+        else: # the input is a path to a directory with diffusion models
+            
+            logger.info("Correcting multiple diffusion models")
+            
+            items = os.listdir(self.diffusion_models_input)
+            diffmodels_to_correct = [os.path.join(self.diffusion_models_input,pdb) for pdb in items if pdb.startswith(os.path.basename(self.original_pdb_path)[:-4]+'_diff')]
+            
+            if len(diffmodels_to_correct) == 0:
+                raise ValueError('No diffusion models detected, diffusion models names must start be original_pdb_name_diff')
+            
+            # Reduce original PDB to backbone atoms and read as dataframe
+            PdbHandler.get_backbone(self.original_pdb_path)
+            PdbHandler.get_atom(self.original_pdb_path[:-4]+'_backbone.pdb')
+            original_pdb_backbone_atoms_df = PdbDf(self.original_pdb_path[:-4]+'_backbone_atom.pdb').get_atoms()
+            
+            # Iterate over the diffusion models and correct
+            for diffmodel in diffmodels_to_correct:
+                
+                diffmodel_df = PdbDf(diffmodel).get_atoms()
+
+                if len(original_pdb_backbone_atoms_df) != len(diffmodel_df):
+                    raise ValueError(f"Original PDB and diffusion model have different number of atoms: \
+                                    {len(original_pdb_backbone_atoms_df)} vs {len(diffmodel_df)}")
+                    
+                diffmodel_df['chain_id'] = original_pdb_backbone_atoms_df['chain_id']
+                diffmodel_df['residue_number'] = original_pdb_backbone_atoms_df['residue_number']
+                
+                diffmodel_fix = PandasPdb().read_pdb(diffmodel)
+                diffmodel_fix.df['ATOM'] = diffmodel_df
+                diffmodel_fix.to_pdb(path= diffmodel[:-4]+'_tmpfix.pdb', records = ['ATOM'], gz=False)  
+                
+                PdbHandler.tidy(diffmodel[:-4]+'_tmpfix.pdb')
+                
+                os.remove(diffmodel[:-4]+'_tmpfix.pdb')
+                os.rename(diffmodel[:-4]+'_tmpfix_tidied.pdb', 
+                        diffmodel[:-4]+'_fix.pdb')
+                
+            for i in [
+                self.original_pdb_path[:-4]+'_backbone.pdb',
+                self.original_pdb_path[:-4]+'_backbone_atom.pdb'
+                ]:
+                os.remove(i)
 
