@@ -27,3 +27,30 @@ $ pip install DockQ
 
 ## Usage
 The objective of this repository is to generate RFdiffusion, FastRelax and PELE runners for our cluster MareNostrumV. The idea is to execute the scripts with the required inputs to generate these runners and then run them following a particular order so as to try to optimize the interaction interface between the two protein components. Soon a guide explaining the order and steps will be indicated.
+
+### System preparation
+
+My Script
+Schrodinger
+
+### Energy base line
+Run PELE
+
+### Structural baseline
+DockQ
+
+### The DiffPELE pipeline
+Explain
+
+Mention iterations
+
+#### Interface diffusion
+RFdiffusion
+
+#### Minimization and side chains repacking
+FastRelax
+
+#### Binding mode adjustment
+PELE
+
+### Analysis
