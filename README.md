@@ -2,13 +2,13 @@
 This pipeline optimizes flexible protein-protein and antibody-antigen interactions. This is done through interface backbone diffusion and Monte Carlo rotations/translations using RFdiffusion (two fist gifs) and PELE (last picture). 
 
 Interface diffusion:
-![](DiffPELE/img/diffusion_1.gif)
+![](./img/diffusion_1.gif)
 
 Different interface backbone conformations:
-![](DiffPELE/img/diffusion_2.png)
+![](./img/diffusion_2.png)
 
 PELE simulation:
-![](DiffPELE/img/pele.gif)
+![](./img/pele.gif)
 
 The objective is to accurately model the conformations of the regions involved in the antibody-antigen or protein-protein interactions.
 
