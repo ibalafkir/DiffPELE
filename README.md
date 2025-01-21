@@ -52,7 +52,7 @@ Run this sequentally in MNV:
 ```bash
 sbatch nbdsuite.sh # Prepare system for PELE
 sbatch runEq.sh # Run equilibration
-./bin/equilibrate_single.sh /path/to/PELE/directory # Equilibrate pose (top total energy in top 20% binding energy)
+./DiffPELE/bin/equilibrate_single.sh /path/to/PELE/directory # Equilibrate pose (top total energy in top 20% binding energy)
 sbatch runProd.sh # Run production
 ```
 Plot results in MNV modifying and using this script, that uses [AdaptivePELE](https://github.com/BSC-CNS-EAPM/AdaptivePELE)
