@@ -3,9 +3,9 @@ This pipeline optimizes flexible protein-protein and antibody-antigen interactio
 
 ![](./img/diffusion_1.gif)
 
-![](./img/diffusion_2.gif)
+![](./img/diffusion_2.png)
 
-![](./img/pele.png)
+![](./img/pele.gif)
 
 The objective is to accurately model the conformations of the regions involved in the antibody-antigen or protein-protein interactions.
 
