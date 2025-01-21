@@ -7,7 +7,7 @@ setup(
     description=("The objective of this pipeline is to optimize protein-protein or antibody-antigen interactions. This is done through interface backbone diffusion and Monte Carlo rotations/translations using RFdiffusion and PELE."),
     license="unlicense",
     keywords="protein-protein interactions, antibody-antigen interactions, interface diffusion, Monte Carlo, RFdiffusion, PELE",
-    url="https://github.com/ibalafkir/diffpele",
+    url="https://github.com/ibalafkir/DiffPELE",
     packages=find_packages(exclude=('tests', 'docs')),
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -1,0 +1,2 @@
+## Note for developers
+In the next updates, we plan to implement scripts for getting equilibrated and filtered PELE poses using Python. For now they are based on bash scripts since it is easy to run them without the need of loading the environment.

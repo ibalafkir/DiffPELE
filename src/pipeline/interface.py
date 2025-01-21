@@ -5,7 +5,6 @@ import copy as cp
 from src.utils.pdb_utils import PdbDf, PdbHandler
 from src.utils.logger_factory import LoggerFactory
 from src.utils.os_utils import display_full_dataframe
-from src.utils.file_handling import write_yaml_data
 import argparse
 
 
@@ -45,12 +44,13 @@ class InterfaceAnalyzer:
         distance_cutOff (float): Distance cut-off for interaction analysis. Default is 12.0.
         """
 
+        # Set attributes
         self.pdb_path = pdb_path
         self.receptor_chain = receptor_chain
         self.ligand_chain = ligand_chain
         self.distance_cutOff = distance_cutOff
         
-        # Used later as outputs
+        # Define attributes for later use
         self.interaction_matrix = None
         self.atom_df_CA_receptor_chain_re = None
         self.atom_df_CA_ligand_chain_re = None
@@ -58,6 +58,8 @@ class InterfaceAnalyzer:
         self.interaction_ligand_chain_df = None     
         
         # Validate inputs
+        # TODO this needs to be done before setting attributes
+        # Change and test the test cases
         self._validate_inputs(
             pdb_path=pdb_path,
             receptor_chain=receptor_chain,
@@ -355,7 +357,7 @@ class InterfaceAnalyzer:
         
 ############################################################################################################################################################
 
-# Parsing args and main call for THIS script
+# Parsing args and main call for THIS script, which pretends to analyze the interface between 2 given chains of a system
     
 def parse_args():
     
@@ -404,7 +406,7 @@ def main(
     pdb_path: str,
     receptor_chain: str,
     ligand_chain: str,
-    distance_cutOff: float = 12.0
+    distance_cutOff: float
     ):
     
     # Initialize the InterfaceAnalyzer class
@@ -446,7 +448,7 @@ def main(
     # Log the results
     logger.info("The interacting residues for chain 1 are: %s", interaction_matrix_receptor_chain_expanded_lst)
     logger.info("The interacting residues for chain 2 are: %s", interaction_matrix_ligand_chain_expanded_lst)
-    logger.info("The pymol automatic selection is: %s", pymol_selection)
+    logger.info("Run this command in the pymol command line to select residues from the interface: %s", pymol_selection)
     logger.info(f"The interaction matrix has been saved to {pdb_path[:-4]}_interaction_matrix.csv")
     logger.info(f"The expanded interaction matrix has been saved to {pdb_path[:-4]}_interaction_matrix_expanded.csv")
     
