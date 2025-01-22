@@ -21,13 +21,13 @@ def parse_args():
         Usage:
         
         To relax one PDB
-        python ./src/2_fastrelax.py -m sequentally -pdb ./data/pdb_files/1a2k.pdb
+        python ./DiffPELE/src/2_fastrelax.py -m sequentally -pdb ./data/pdb_files/1a2k.pdb
         
         To relax multiple PDBs of a directory sequentally
-        python ./src/2_fastrelax.py -m sequentally -pdb ./data/pdb_files/
+        python ./DiffPELE/src/2_fastrelax.py -m sequentally -pdb ./data/pdb_files/
         
         To generate a bash runner to run parallely over multiple PDBs in a directory
-        python ./src/2_fastrelax.py -m parallel -pdb ./data/pdb_files/
+        python ./DiffPELE/src/2_fastrelax.py -m parallel -pdb ./data/pdb_files/
         """
     mode = \
         "Mode of operation: 'sequentally' for running a single PDB file or 'parallel' \
@@ -71,7 +71,7 @@ def main():
     elif args.mode == 'parallel':
             
         make_fastrelax_runner(
-            path_to_fastrelax_script=f"{os.path.dirname(__file__)}/2_fastrelax.py -m sequentally -pdb",
+            path_to_fastrelax_script=f"/gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/2_fastrelax.py -m sequentally -pdb",
             pdbs_dir=args.pdb_path
             )
 
