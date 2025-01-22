@@ -134,7 +134,7 @@ def make_fastrelax_runner(
 
     module load greasy
     ml anaconda
-    source activate /gpfs/projects/bsc72/conda_envs/pyrosetta
+    source activate /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
 
     cat <<EOL > __COMMANDS__
     EOL
