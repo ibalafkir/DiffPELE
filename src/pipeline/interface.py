@@ -43,7 +43,15 @@ class InterfaceAnalyzer:
         ligand_chain (str): Chain ID for the second protein chain.
         distance_cutOff (float): Distance cut-off for interaction analysis. Default is 12.0.
         """
-
+        
+        # Validate inputs
+        self._validate_inputs(
+            pdb_path=pdb_path,
+            receptor_chain=receptor_chain,
+            ligand_chain=ligand_chain,
+            distance_cutOff=distance_cutOff
+        )   
+        
         # Set attributes
         self.pdb_path = pdb_path
         self.receptor_chain = receptor_chain
@@ -56,16 +64,6 @@ class InterfaceAnalyzer:
         self.atom_df_CA_ligand_chain_re = None
         self.interaction_receptor_chain_df = None
         self.interaction_ligand_chain_df = None     
-        
-        # Validate inputs
-        # TODO this needs to be done before setting attributes
-        # Change and test the test cases
-        self._validate_inputs(
-            pdb_path=pdb_path,
-            receptor_chain=receptor_chain,
-            ligand_chain=ligand_chain,
-            distance_cutOff=distance_cutOff
-        )   
         
         
     def _validate_inputs(
@@ -425,7 +423,7 @@ def main(
     interaction_matrix_receptor_chain_expanded, interaction_matrix_ligand_chain_expanded \
         = analyzer.expand_interface(neighborhood=3)
     interaction_matrix_receptor_chain_expanded.to_csv(f'{pdb_path[:-4]}_interaction_matrix_expanded.csv', index=False)
-    interaction_matrix_ligand_chain_expanded.to_csv(f'{pdb_path[:-4]}_interaction_matrix_expanded.csv.', header='False', mode='a', index=False)
+    interaction_matrix_ligand_chain_expanded.to_csv(f'{pdb_path[:-4]}_interaction_matrix_expanded.csv', header='False', mode='a', index=False)
     
     # Get the expanded interacting residues as lists
     interaction_matrix_receptor_chain_expanded_lst, interaction_matrix_ligand_chain_expanded_lst \
@@ -448,7 +446,7 @@ def main(
     # Log the results
     logger.info("The interacting residues for chain 1 are: %s", interaction_matrix_receptor_chain_expanded_lst)
     logger.info("The interacting residues for chain 2 are: %s", interaction_matrix_ligand_chain_expanded_lst)
-    logger.info("Run this command in the pymol command line to select residues from the interface: %s", pymol_selection)
+    logger.info("Run this command in the pymol command line to select and visualize residues from the interface: %s", pymol_selection)
     logger.info(f"The interaction matrix has been saved to {pdb_path[:-4]}_interaction_matrix.csv")
     logger.info(f"The expanded interaction matrix has been saved to {pdb_path[:-4]}_interaction_matrix_expanded.csv")
     
