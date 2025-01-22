@@ -83,8 +83,9 @@ python -m pele_platform.plotter \
 Run DockQ if you are comparing an optimized system and a non-optimized system.
 
 ```bash
-DockQ <model> <native>
+DockQ <a> <b>
 ```
+where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized one.
 
 ### The DiffPELE pipeline
 Given a protein-protein system in the approx. correct binding mode, the idea is to explore the interface backbone conformations using RFdiffusion, minimize the pose while repacking side chains and adjust the binding mode and side chain orientations using PELE. This is 1 epoch: we advice running several (the more epochs are run, the more the interface backbone conformational space is explored).
