@@ -68,6 +68,8 @@ def main():
             for pdb in pdbs:
                 run_fast_relax(os.path.join(args.pdb_path, pdb))
     
+        logger.info("FastRelax protocol applied successfully")
+        
     elif args.mode == 'parallel':
             
         make_fastrelax_runner(
