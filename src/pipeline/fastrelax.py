@@ -118,7 +118,7 @@ def make_fastrelax_runner(
     pdbs = [pdb for pdb in items if pdb.endswith('.pdb')]
     
     # Write string variable with greasy relaxjob info
-    relax_job_greasy = "relaxjob.txt\n"+"\n".join([f"python {path_to_fastrelax_script} {os.path.join(pdbs_dir, pdb)}" for pdb in pdbs])
+    relax_job_greasy = "relaxjob.txt\n"+"\n".join([f"python {path_to_fastrelax_script} {os.path.join(os.path.abspath(pdbs_dir), pdb)}" for pdb in pdbs])
     relax_job_greasy = textwrap.indent(relax_job_greasy, '    ')
     
     content = f"""
