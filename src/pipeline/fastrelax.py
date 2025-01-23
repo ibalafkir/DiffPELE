@@ -123,7 +123,7 @@ def make_fastrelax_runner(
     
     content = f"""
     #!/bin/bash
-    #SBATCH --job-name=relax
+    #SBATCH --job-name=__RJN__
     #SBATCH --output=logs/%x_%j.out
     #SBATCH --error=logs/%x_%j.err 
     #SBATCH --ntasks=__NPDBS__
@@ -146,6 +146,7 @@ def make_fastrelax_runner(
     # Adjustments
     content = content.replace('__NPDBS__', str(len(pdbs)))
     content = content.replace('__COMMANDS__', relax_job_greasy)
+    content = content.replace('__RJN__', os.path.basename(pdbs_dir)[:2]+"_rel")
         
     # Remove indentation
     content = textwrap.dedent(content)
