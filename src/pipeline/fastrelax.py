@@ -152,6 +152,6 @@ def make_fastrelax_runner(
     content = content.lstrip("\n")
     
     # Write content
-    output_path = os.path.join(pdbs_dir, 'fastrelax.sh')
+    output_path = os.path.join(os.path.abspath(pdbs_dir), 'fastrelax.sh')
     with open(output_path, "w") as file:
         file.write(content)
