@@ -77,5 +77,7 @@ def main():
             pdbs_dir=args.pdb_path
             )
 
+        logger.info("FastRelax runner generated successfully")
+        
 if __name__ == "__main__":
     main()
