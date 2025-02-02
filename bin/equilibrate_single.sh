@@ -66,7 +66,7 @@ N_MODEL=$((acceptedStep + 1)) # Models start by 1 and acceptedSteps by 0
 V6=$(cat snapshotOfInterest.txt | awk '{print $6}')
 V7=$(cat snapshotOfInterest.txt | awk '{print $7}')
 V8=$(cat snapshotOfInterest.txt | awk '{print $8}')
-grep -rl "${V6}    ${V7}    ${V8}" "${PELE_DIR}" --include="rep*" > snapshotOfInterest_path.txt
+grep -rl "${V6}    ${V7}    ${V8}" "${PELE_DIR}/outEQ/0" --include="rep*" > snapshotOfInterest_path.txt
 echo "The selected pose lies in:"
 cat snapshotOfInterest_path.txt
 
