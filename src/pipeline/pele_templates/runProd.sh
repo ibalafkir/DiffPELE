@@ -3,13 +3,13 @@
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --ntasks=_nCPUs_
-#SBATCH --time=24:00:00            
+#SBATCH --time=4:00:00            
 #SBATCH -D .
 #SBATCH --cpus-per-task=1
-##SBATCH --qos=gp_debug
 #SBATCH --qos=gp_bscls
 #SBATCH --account=bsc72
 
+conda deactivate
 module purge
 ml intel/2023.2.0
 ml cmake/3.25.1
@@ -23,6 +23,7 @@ export SCHRODINGER_PYTHONPATH="/gpfs/projects/bsc72/Programs/SCHRODINGER_ACADEMI
 export PELE="/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/"
 export PELE_EXEC="/gpfs/projects/bsc72/PELE++/mnv/1.8.0/bin/PELE-1.8_mpi_intel"
 export SRUN=1  # this is to avoid having to set usesrun: true in input.yaml
-source activate /gpfs/projects/bsc72/conda_envs/adaptive
+eval "$(conda shell.bash hook)"
+conda activate /gpfs/projects/bsc72/conda_envs/adaptive
 
 python -m AdaptivePELE.adaptiveSampling ctrl/adProd.conf
