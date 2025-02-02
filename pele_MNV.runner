@@ -1,0 +1,62 @@
+#!/bin/bash
+#SBATCH --job-name=pele
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --ntasks=1
+#SBATCH --time=24:00:00            
+#SBATCH -D .
+#SBATCH --cpus-per-task=1
+#SBATCH --qos=gp_bscls
+#SBATCH --account=bsc72
+
+# ------------------------------------------------------------
+# Run a PELE equilibration-production protocol with 1 system
+# ------------------------------------------------------------
+# PARAMETERS                                                
+# ------------------------------------------------------------
+PDB=$(realpath "$1") # No gaps or ab insertion codes
+RECEPTOR_CHAINS=$2 # 1 chain/letter or 2 comma-sepparated
+LIGAND_CHAINS=$3 # 1 chain/letter
+# ------------------------------------------------------------
+
+# Start time
+start_time=$(date +%s)
+
+# Load diffpele env
+ml anaconda
+source activate /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
+
+# Set up PELE files
+python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/3_pele_simulation.py -pdb $PDB \
+	                                                                      -rc $RECEPTOR_CHAINS \
+									                                      -lc $LIGAND_CHAINS \
+									                                      -dc 12.0 \
+									                                      -m single
+
+PELE_BASE_DIR=${PDB%.*}_peleBaseline
+
+cd $PELE_BASE_DIR  
+
+# Run nbdsuite preparation
+echo "Preparing system with NBDsuite"
+job_nbdsuite=$(sbatch nbdsuite.sh | awk '{print $4}')
+
+# Run PELE equilibration
+echo "Running PELE equilibration"
+sbatch --dependency=afterok:$job_nbdsuite --wait runEq.sh
+
+# Equilibrate pose
+bash /gpfs/scratch/bsc72/ismael/repos/DiffPELE/bin/equilibrate_single.sh $PELE_BASE_DIR
+
+# Run PELE production
+echo "Running PELE production"
+sbatch --wait runProd.sh # this works: job_runProd=$(sbatch runProd.sh | awk '{print $4}')
+
+# End time
+end_time=$(date +%s)
+
+# Compute running time
+elapsed_time=$((end_time - start_time))
+minutes=$((elapsed_time / 60))
+seconds=$((elapsed_time % 60))
+echo "PELE Execution time: ${minutes}m ${seconds}s"
