@@ -16,7 +16,7 @@
 # ------------------------------------------------------------
 PDB=$(realpath "$1") # No gaps or ab insertion codes
 RECEPTOR_CHAINS=$2 # 1 chain/letter or 2 comma-sepparated
-LIGAND_CHAINS=$3 # 1 chain/letter
+LIGAND_CHAINS=$3 # 1 chain/letter. This is the chain to be perturbed
 # ------------------------------------------------------------
 
 # Start time
