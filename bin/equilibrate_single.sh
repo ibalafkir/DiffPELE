@@ -49,7 +49,7 @@ sort -k 5,5n reports_snapshots.txt | uniq > reports_snapshots_BE.txt
 
 # Get the best 20% in binding energy
 N_SNAPSHOTS=$(wc -l < reports_snapshots_BE.txt)
-N_SNAPSHOTS_FILTERED=$(echo "$N_SNAPSHOTS * 0.2" | bc | awk '{print int($1+0.5)}') # picks 20%+1pose
+N_SNAPSHOTS_FILTERED=$(echo "$N_SNAPSHOTS * 0.2" | bc | awk '{print ($1 == int($1)) ? $1 : int($1)+1}') # always rounds up
 head reports_snapshots_BE.txt -n $N_SNAPSHOTS_FILTERED > reports_snapshots_BE_filtered.txt
 
 # Ordering by total energy
@@ -66,14 +66,14 @@ N_MODEL=$((acceptedStep + 1)) # Models start by 1 and acceptedSteps by 0
 V6=$(cat snapshotOfInterest.txt | awk '{print $6}')
 V7=$(cat snapshotOfInterest.txt | awk '{print $7}')
 V8=$(cat snapshotOfInterest.txt | awk '{print $8}')
-grep -rl "${V6}    ${V7}    ${V8}" "${PELE_DIR}/outEQ/0" --include="rep*" > snapshotOfInterest_path.txt
+grep -rl "${V6}    ${V7}    ${V8}" "${PELE_DIR}/outEQ/0" --include="rep*" | head -n 1 > snapshotOfInterest_path.txt # even if more than 1 snapshot coincides, it picks the first
 echo "The selected pose lies in:"
 cat snapshotOfInterest_path.txt
 
 # Debug (verify only one pose was selected)
 if [ $(wc -l < snapshotOfInterest_path.txt) -gt 1 ]; then
     echo "More than 1 snapshot coincided with the pattern"
-    break
+    #break
 fi
 
 # Get the trajectory number
