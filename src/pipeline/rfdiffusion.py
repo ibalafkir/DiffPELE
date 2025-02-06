@@ -518,9 +518,14 @@ class RFdiffSetUp:
         #SBATCH --nodes=1
         #SBATCH --account=bsc72
 
+        # Changes to find ACC's modules
+        module purge
+        export MODULEPATH=/apps/ACC/modulefiles/applications:/apps/ACC/modulefiles/compilers:/apps/ACC/modulefiles/environment:/apps/ACC/modulefiles/lib
+
         # Environment stuff
         module load anaconda/2024.02
-        source activate RFDiffusion
+        eval "$(conda shell.bash hook)"
+        conda activate RFDiffusion
 
         # Parameters
         complex_pdb=__PDB__ # PDB hbond-opt, relaxed, fixed (removed insertions)
