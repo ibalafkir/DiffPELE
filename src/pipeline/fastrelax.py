@@ -132,9 +132,10 @@ def make_fastrelax_runner(
     #SBATCH --account=bsc72 
     #SBATCH --qos=gp_bscls
 
+    module load anaconda
     module load greasy
-    ml anaconda
-    source activate /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
+    eval "$(conda shell.bash hook)"
+    conda activate /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
 
     cat <<EOL > __COMMANDS__
     EOL
