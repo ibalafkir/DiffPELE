@@ -33,7 +33,7 @@ python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/3_pele_simulation.py -pdb $
 -dc 12.0 \
 -m single
 
-PELE_BASE_DIR=${PDB%.*}_peleBaseline
+PELE_BASE_DIR=${PDB%.*}_PELE
 
 cd $PELE_BASE_DIR  
 
