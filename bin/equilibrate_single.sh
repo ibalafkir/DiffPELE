@@ -49,7 +49,7 @@ sort -k 5,5n reports_snapshots.txt | uniq > reports_snapshots_BE.txt
 
 # Get the best 20% in binding energy
 N_SNAPSHOTS=$(wc -l < reports_snapshots_BE.txt)
-N_SNAPSHOTS_FILTERED=$(echo "$N_SNAPSHOTS * 0.2" | bc | awk '{print ($1 == int($1)) ? $1 : int($1)+1}') # always rounds up
+N_SNAPSHOTS_FILTERED=$(echo "$N_SNAPSHOTS * 0.2" | bc | awk '{print ($1 == int($1)) ? $1 : int($1)+1}' | sed 's/\..*//') # always rounds up
 head reports_snapshots_BE.txt -n $N_SNAPSHOTS_FILTERED > reports_snapshots_BE_filtered.txt
 
 # Ordering by total energy

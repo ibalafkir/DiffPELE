@@ -65,7 +65,8 @@ awk '$1 == 1' "$PELE_DIR/merged_reports/system_${i}.txt" > snapshots.txt # remov
 no_lines=$(cat snapshots.txt | wc -l)
 #echo $no_lines
 no_lines_filtrated=$(echo "$no_lines * 0.2" | bc)
-no_lines_filtrated_aprox=$(echo "$no_lines * 0.2" | bc | awk '{print int($1+1)}') # picks up 20%+1pose
+#no_lines_filtrated_aprox=$(echo "$no_lines * 0.2" | bc | awk '{print int($1+1)}') # picks up 20%+1pose
+no_lines_filtrated_aprox=$(echo "$no_lines * 0.2" | bc | awk '{print ($1 == int($1)) ? $1 : int($1)+1}' | sed 's/\..*//') # always rounds up
 #echo $no_lines_filtrated
 #echo $no_lines_filtrated_aprox
 sort -n -k 5,5 snapshots.txt | head -n $no_lines_filtrated_aprox > snapshots_f.txt # get top 20% BE 
@@ -97,12 +98,12 @@ do
   V6=$(echo "$line" | awk '{print $6}')
   V7=$(echo "$line" | awk '{print $7}')
   V8=$(echo "$line" | awk '{print $8}')
-  grep -rl "${V6}    ${V7}    ${V8}" "${PELE_DIR}/outEQ/0" --include="rep*" > snapshotOfInterest_path.txt
+  grep -rl "${V6}    ${V7}    ${V8}" "${PELE_DIR}/outEQ/0" --include="rep*" | head -n 1 > snapshotOfInterest_path.txt
   
   # Debug (verify there is one only snapshot)
   if [ $(wc -l < snapshotOfInterest_path.txt) -gt 1 ]; then
 	  echo "More than 1 snapshot coincided with the pattern"
-	  break
+	  #break
   fi
 
   # Get the trajectory number
