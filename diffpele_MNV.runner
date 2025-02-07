@@ -1,0 +1,99 @@
+#!/bin/bash
+#SBATCH --job-name=diffpele
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --ntasks=1
+#SBATCH --time=48:00:00            
+#SBATCH -D .
+#SBATCH --cpus-per-task=1
+#SBATCH --qos=gp_bscls
+#SBATCH --account=bsc72
+
+# ------------------------------------------------------------
+# Run a DiffPELE epoch with 1 system
+# ------------------------------------------------------------
+# PARAMETERS                                                
+# ------------------------------------------------------------
+PDB_PATH=$(realpath "$1") # No gaps or ab insertion codes
+PDB_PATH_BASENAME=$(basename "$PDB_PATH")
+PDB_PATH_BASENAME_NOEXT=${PDB_PATH_BASENAME%%.*}
+PDB_PATH_NOEXT=${PDB_PATH%%.*}
+
+RECEPTOR_CHAINS=$2 # 1 chain/letter or 2 comma-sepparated
+LIGAND_CHAINS=$3 # 1 chain/letter. This is the chain to be perturbed in PELE simulations
+
+# Start time
+start_time=$(date +%s)
+
+# Load diffpele env
+ml anaconda
+source activate /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
+
+# Set up RFdiffusion files and runner and run RFdiffusion
+echo " > Running RFdiffusion to explore interface backbone conformations"
+
+python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/1_interface_diffusion.py -m setup \
+									      -pdb $PDB_PATH \
+									      -rc $RECEPTOR_CHAINS \
+									      -lc $LIGAND_CHAINS \
+									      -dc 12.0 \
+									      -rip /gpfs/projects/bsc72/Repos/RFdiffusion/scripts/run_inference.py
+cd ${PDB_PATH_NOEXT}_diffusion
+sbatch --partition=acc --wait rfdiffusion_partial.sh
+
+# Fix the PDB format of diffusion models
+echo " > Correcting diffusion models"
+
+python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/1_interface_diffusion.py -m fix \
+									      -pdb $PDB_PATH \
+									      -dmi ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels
+
+# Set up FastRelax protocol files and runner (bash and greasy) and run minimization
+echo " > Running FastRelax on diffusion models - repacking and iteratively minimizing side chains conformation without altering backbone"
+
+python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/2_fastrelax.py -m parallel \
+	                                                            -pdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix
+sbatch --wait ${PDB_PATH_NOEXT}_diffusion/fastrelax.sh
+mkdir ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax
+mv ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix/*_relax.pdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax # move relaxed diffusion models to new directory
+
+# Set up PELE files and runners
+python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/3_pele_simulation.py -pdb $PDB_PATH \
+	                                                                  -rc $RECEPTOR_CHAINS \
+									  -lc $LIGAND_CHAINS \
+									  -dc 12.0 \
+									  -m multiple \
+									  -mpdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax
+PELE_BASE_DIR=${PDB_PATH_NOEXT}_diffusion_pele
+cd $PELE_BASE_DIR
+
+# Run nbdsuite preparation
+echo " > Preparing minimized diffusion models with NBDsuite for PELE simulations"
+
+job_nbdsuite=$(sbatch nbdsuite.sh | awk '{print $4}')
+
+# Run PELE equilibration
+echo " > Running PELE equilibration on minimized diffusion models"
+
+sbatch --dependency=afterok:$job_nbdsuite --wait runEq.sh
+
+# Filtering equilibrated models
+echo " > Keeping most promising (in total energy) equilibrated models for production"
+
+bash /gpfs/scratch/bsc72/ismael/repos/DiffPELE/bin/equilibrate_multiple.sh $PELE_BASE_DIR
+
+# Run PELE production
+echo " > Running PELE production"
+sbatch --wait runProd.sh # this works: job_runProd=$(sbatch runProd.sh | awk '{print $4}')
+
+# Group RFdiffusion and PELE directories
+mkdir -p ${PDB_PATH_NOEXT}_diffpele
+mv ${PDB_PATH_NOEXT}_diffusion ${PDB_PATH_NOEXT}_diffpele
+mv ${PDB_PATH_NOEXT}_diffusion_pele ${PDB_PATH_NOEXT}_diffpele
+
+# Compute running time and log
+elapsed_time=$((end_time - start_time))
+minutes=$((elapsed_time / 60))
+seconds=$((elapsed_time % 60))
+	
+echo " > DiffPELE Execution time: ${minutes}m ${seconds}s"
