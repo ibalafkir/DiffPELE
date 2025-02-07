@@ -1,5 +1,5 @@
 # DiffPELE
-This pipeline optimizes flexible protein-protein and antibody-antigen interactions. This is done through interface backbone diffusion and Monte Carlo rotations/translations using RFdiffusion (two fist gifs) and PELE (last picture). 
+This pipeline optimizes flexible protein-protein and antibody-antigen interactions. This is done through interface backbone diffusion and Monte Carlo rotations/translations using RFdiffusion and PELE. 
 
 The objective is to accurately model the conformations of the regions involved in the antibody-antigen or protein-protein interactions.
 
@@ -28,106 +28,46 @@ pip install DockQ
 ```
 
 ## Usage
-The objective of this repository is to generate RFdiffusion, FastRelax and PELE runners for our cluster MareNostrumV. The idea is to execute the scripts with the required inputs to generate these runners and then run them following a particular order so as to try to optimize the interaction interface between the two protein components. Soon a guide explaining the order and steps will be indicated.
 
-WARNING: for running python code from this repository in MNV:
-```bash
-ml anaconda
-source activate /path/to/DiffPELE # /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
-```
-and remember to launch diffusion runner using cluster GPU partitions and the rest on CPUs. 
+This repository allows running the protein-protein PELE equilibration-production protocol and the DiffPELE protocol, which is a pipeline that integrates the next workflow, given a PDB protein-protein system:
+- RFdiffusion (partial diffusion protocol) to generate an ensemble of poses with different interface backbone conformations.
+- FastRelax to repack and minimize side chains in diffusion models.
+- PELE to refine (adjust the binding mode and mainly side chains conformations) the repacked and minimized diffusion models.
 
 ### System preparation
 
 Given your protein-protein system, keep only amino acids from chains of interest and remove waters, small molecules, etc.
-Use the script ./DiffPELE/src/0_preprocess_system.py to fastly do PDB operations (remove/save chains, remove hetatms, add TERs, renumber antibody insertion numbers...). The prepared PDB must not have residue numbers gaps or antibody insertion codes (1, 1A, 1B, 2...).
+Use the script `./DiffPELE/src/0_preprocess_system.py` to fastly do certain PDB operations (remove/save chains, remove hetatms, add TERs, renumber antibody insertion numbers...) although it is not compulsory. The prepared PDB must not have residue numbers gaps (1, 2, 3, 4, 6) or antibody insertion codes (1, 1A, 1B, 2...).
 
 Finally, run this Schrodinger pipeline:
 ```bash
-$SCHRODINGER/utilities/prepwizard input.pdb output.pdb -rehtreat -disulfides -fillloops -fillsidechains -propka_pH 7.4 -minimize_adj_h -f OPLS_2005
+$SCHRODINGER/utilities/prepwizard ./DiffPELE/examples/4POU.pdb ./DiffPELE/examples/4POU_prep.pdb -rehtreat -disulfides -fillloops -fillsidechains -propka_pH 7.4 -minimize_adj_h -f OPLS_2005
 ```
-### Energy baseline
-The energy baseline corresponds to energy calculations (total and binding energy) of the conformations obtained from the conformational space that occur in the given binding mode. A protein-protein complex in which interactions are not optimized, it is expected that the ensemble of these conformations show high energy values. 
+where $SCHRODINGER stands for the path of the Maestro Schrodinger molecular modeling suite.
 
-Here, we do the baseline using PELE in a protocol that consists of two stages: equilibration and production. You can compare the PELE energy profiles of an optimized and and a not-optimized version of a system.
+### Run DiffPELE in MNV
 
-To generate the PELE MNV runners:
+To run DiffPELE in MNV use our runner and adapt parameters to your input PDB and chains or input from terminal. See these 2 examples:
 ```bash
-python 3_pele_simulation.py -pdb ./DiffPELE/examples/4POU_b.pdb -rc B -lc A -dc 12.0 -m single
+sbatch ./DiffPELE/diffpele_MNV.runner ./DiffPELE/examples/4POU.pdb B A
+sbatch ./DiffPELE/diffpele_MNV.runner ./DiffPELE/examples/5C7X.pdb H,L A
 ```
-Run this sequentally in MNV:
-```bash
-sbatch nbdsuite.sh # Prepare system for PELE
-sbatch runEq.sh # Run equilibration
-./DiffPELE/bin/equilibrate_single.sh /path/to/PELE/directory # Equilibrate pose (top total energy in top 20% binding energy)
-sbatch runProd.sh # Run production
-```
-Plot results in MNV modifying and using this script, that uses [AdaptivePELE](https://github.com/BSC-CNS-EAPM/AdaptivePELE)
-```bash
-#!/bin/bash
-module purge
-ml intel/2023.2.0
-ml cmake/3.25.1
-ml impi/2021.10.0
-ml mkl/2023.2.0
-ml boost/1.77.0-gcc
-ml anaconda
-ml bsc
-ml transfer
-eval "$(conda shell.bash hook)"
-conda activate /gpfs/projects/bsc72/conda_envs/platform
+Finally, check energy profiles in reports located at: `(system)_diffpele/(system)_diffusion_pele/outPROD/0`
 
-python -m pele_platform.plotter \
-	-o /path/to/PELE/directory/outPROD/0 \
-	-t scatter \
-	-z _ -y 5 -x 4 --hide_logo \
-	-s /path/to/save/png \
-	--title '' \
-	--xlowest _ --xhighest _ --ylowest _ --yhighest _ --zlowest _ --zhighest _
-```
+### Run PELE in MNV
 
-### Structural baseline
-Run DockQ if you are comparing an optimized system and a non-optimized system.
+Similarly, to run PELE in MNV on protein-protein systems, use our runner and adapt parameters to your input PDB and chains or input from terminal. See these 2 examples:
+```bash
+sbatch ./DiffPELE/pele_MNV.runner ./DiffPELE/examples/4POU.pdb B A
+sbatch ./DiffPELE/pele_MNV.runner ./DiffPELE/examples/5C7X.pdb H,L A
+```
+Finally, check energy profiles in reports located at: `(system)_peleBaseline/outPROD/0`
+In this context, run PELE on a system with non-optimized interface conformations and on a system with optimized interface conformations to account for the energy baseline.
+
+### Run DockQ
+We use DockQ to measure (according to structure metrics) how unoptimized is a system in comparison to its optimized version.
 
 ```bash
 DockQ <a> <b>
 ```
 where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized one.
-
-### The DiffPELE pipeline
-Given a protein-protein system in the approx. correct binding mode, the idea is to explore the interface backbone conformations using RFdiffusion, minimize the pose while repacking side chains and adjust the binding mode and side chain orientations using PELE. This is 1 epoch: we advice running several (the more epochs are run, the more the interface backbone conformational space is explored).
-
-#### Interface diffusion
-Generate runners for RFdiffusion:
-```bash
-python 1_interface_diffusion.py -m setup -pdb ./DiffPELE/examples/4POU_b.pdb -rc B -lc A -dc 12.0 -rip /gpfs/projects/bsc72/Repos/RFdiffusion/scripts/run_inference.py
-```
-Now run the following to correct the PDB format of diffusion models:
-```bash
-python 1_interface_diffusion.py -m fix -pdb ./DiffPELE/examples/4POU_b.pdb -dmi /path/to/*diffModels
-```
-
-#### Minimization and side chains repacking
-Generate FastRelax runner on the PDBs located in the diffModels_fix folder:
-```bash
-python 2_fastrelax.py -m parallel -pdb /path/to/pdb
-```
-and launch runner:
-```bash
-sbatch fastrelax.sh
-```
-
-#### Binding mode adjustment
-Finally, run PELE for all the fixed and minimized diffusion models. To create the runners: 
-```bash
-python 3_pele_simulation.py -pdb ./DiffPELE/examples/4POU_b.pdb -rc B -lc A -dc 12.0 -m multiple -mpdb /path/to/dir/with/diffusion_models
-```
-And run:
-```bash
-sbatch nbdsuite.sh # Prepare system for PELE
-sbatch runEq.sh # Run equilibration
-./bin/equilibrate_multiple.sh /path/to/PELE/directory # Equilibrate pose (top total energy in top 20% binding energy)
-sbatch runProd.sh # Run production
-```
-### Analysis
-Run DockQ and compare PELE energy profiles as mentioned before.
