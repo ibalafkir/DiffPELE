@@ -217,7 +217,7 @@ def main(
         # Change the PELE directory name to specify that it runs at multiple mode
         os.rename(
             os.path.abspath(pdb_path)[:-4]+'_pele',
-            os.path.abspath(pdb_path)[:-4]+'_dif_pele'
+            os.path.abspath(pdb_path)[:-4]+'_diffusion_pele'
         )
         logger.info("You have generated PELE simulation files for multiple mode (i.e. starting at multiple initial systems).")
         logger.info("Numbe of initial systems: "+str(n_initial_pdbs)+"; Number of equilibrated systems to run in production: "+str(n_equi_to_production))
