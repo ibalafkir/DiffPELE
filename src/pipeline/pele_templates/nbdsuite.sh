@@ -3,8 +3,8 @@
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --ntasks=_nCPUs_
-#SBATCH --qos=gp_debug
-#SBATCH --time=0:10:00
+#SBATCH --qos=gp_bscls
+#SBATCH --time=0:30:00
 #SBATCH --account=bsc72
 
 ml intel/2023.2.0
