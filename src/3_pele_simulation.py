@@ -136,7 +136,7 @@ def main(
         # Change the PELE directory name to specify that it runs at multiple mode
         os.rename(
             os.path.abspath(pdb_path)[:-4]+'_pele',
-            os.path.abspath(pdb_path)[:-4]+'_peleBaseline'
+            os.path.abspath(pdb_path)[:-4]+'_PELE'
         )
         logger.info("You have generated PELE simulation files for single mode (i.e. starting at one initial pose/system).")
         logger.info("The PELE root directory name has been renamed to *peleBaseline since the only purpose of running PELE in single mode in this pipeline is to set the baseline")
