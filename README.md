@@ -70,4 +70,9 @@ We use DockQ to measure (according to structure metrics) how unoptimized is a sy
 ```bash
 DockQ <a> <b>
 ```
-where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized one.
+where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized/native one.
+
+To run DockQ on the best PELE poses (in binding energy), run our script:
+```bash
+bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb
+```
