@@ -30,6 +30,8 @@ extract_model() {
 # Parameters
 PELE_DIR=$(realpath "$1")
 NATIVE_PDB=$(realpath "$2")
+RECEPTOR_CHAINS=$3
+LIGAND_CHAINS=$4
 
 # Make output dir
 mkdir -p $PELE_DIR/structure_evaluation
@@ -67,7 +69,8 @@ echo "${PELE_DIR}/outPROD/0/trajectory_${n_traj}_${n_model}.pdb" >> $PELE_DIR/st
 echo "$accepted_step" >> $PELE_DIR/structure_evaluation/dockq.txt
 
 # Run DockQ
-dockq_result=$(DockQ "${PELE_DIR}/structure_evaluation/trajectory_${n_traj}_model_${n_model}.pdb" "$NATIVE_PDB" --short --mapping AB:AB | tail -n 1 | awk '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}') 
+#dockq_result=$(DockQ "${PELE_DIR}/structure_evaluation/trajectory_${n_traj}_model_${n_model}.pdb" "$NATIVE_PDB" --short --mapping AB:AB | tail -n 1 | awk '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}') 
+dockq_result=$(python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/4_evaluate_models.py -pdb "$NATIVE_PDB" -mp "${PELE_DIR}/structure_evaluation/trajectory_${n_traj}_model_${n_model}.pdb" -rc $RECEPTOR_CHAINS -lc $LIGAND_CHAINS)
 
 # Write DockQ output in $PELE_DIR/structure_evaluation/dockq.txt
 echo $dockq_result >> $PELE_DIR/structure_evaluation/dockq.txt
