@@ -65,14 +65,14 @@ Finally, check energy profiles in reports located at: `(system)_peleBaseline/out
 In this context, run PELE on a system with non-optimized interface conformations and on a system with optimized interface conformations to account for the energy baseline.
 
 ### Run DockQ
-We use DockQ to measure (according to structure metrics) how unoptimized is a system in comparison to its optimized version.
+We use DockQ to measure (according to structure metrics) how unoptimized is a system in comparison to its optimized version. If there is one receptor chain and one ligand chain (thus one interface) DockQ can be run like that.
 
 ```bash
 DockQ <a> <b>
 ```
-where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized/native one.
+where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized/native one. In case the receptor has 2 chains, you need to merge the receptor chains. See for further information: https://github.com/bjornwallner/DockQ/issues/33
 
 To run DockQ on the best PELE poses (in binding energy), run our script:
 ```bash
-bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb
+bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb receptorChain(s) ligandChain
 ```
