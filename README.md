@@ -75,4 +75,6 @@ where 'a' stands for the system with non-optimized interactions and 'b' stands f
 To run DockQ on the best PELE poses (in binding energy), run our script:
 ```bash
 bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb receptorChain(s) ligandChain
+bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb B A
+bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb H,L A
 ```
