@@ -63,7 +63,7 @@ extract_model "${PELE_DIR}/outPROD/0/trajectory_$n_traj.pdb" $n_model $PELE_DIR
 echo "New pose:" >> $PELE_DIR/structure_evaluation/dockq.txt
 
 # Write PDB path in dockq.txt
-echo "${PELE_DIR}/outPROD/0/trajectory_${n_traj}_${n_model}.pdb" >> $PELE_DIR/structure_evaluation/dockq.txt
+echo "${PELE_DIR}/structure_evaluation/trajectory_${n_traj}_model_${n_model}.pdb" >> $PELE_DIR/structure_evaluation/dockq.txt
 
 # Write accepted_step's metrics in $PELE_DIR/structure_evaluation/dockq.txt
 echo "$accepted_step" >> $PELE_DIR/structure_evaluation/dockq.txt
