@@ -78,3 +78,9 @@ bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.
 bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb B A
 bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb H,L A
 ```
+
+### Run several DiffPELE iterations
+Remember that in DiffPELE, as the last stage is running PELE: its trajectories or models have residue names that are different from the REF15 FF used in RFdiffusion. Thus, models after one DiffPELE epoch will need residue renaming before entering on a second epoch. Use our script:
+```bash
+python ./DiffPELE/src/5_postprocess_model.py /path/to/PDB/or/dirWithPDBs
+```
