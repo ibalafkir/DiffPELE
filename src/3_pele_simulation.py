@@ -122,14 +122,14 @@ def main(
 
         # PELE production
         simulation_sys.create_production_runner(
-            nCPUs=64,
+            nCPUs=255,
             prodJobRunnerName=pdb_code[:2]+'_prod'
         )
         simulation_sys.create_control_adaptive_production(
             outputPathName="outPROD",
             nEpochs=1,
             nSteps=300,
-            nCPUs=64
+            nCPUs=255
         )
         simulation_sys.create_pele_conf_production()
     
@@ -183,14 +183,14 @@ def main(
         # PELE production
         # 16 CPUs per initial system/PDB plus 1 CPU
         simulation_sys.create_production_runner(
-            nCPUs = 16*n_equi_to_production + 1,
+            nCPUs = 32*n_equi_to_production + 1,
             prodJobRunnerName=pdb_code[:2]+'_d_pro'
         )
         simulation_sys.create_control_adaptive_production(
             outputPathName="outPROD",
             nEpochs=1,
             nSteps=200,
-            nCPUs = 16*n_equi_to_production + 1,
+            nCPUs = 32*n_equi_to_production + 1,
         )
         simulation_sys.create_pele_conf_production()
         
