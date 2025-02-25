@@ -3,7 +3,7 @@
 # Description: From a PELE production simulation, get the poses with 
 # low binding energies (BE) and compare to a native system using DockQ
 
-# Usage: bash script.sh /path/to/PELE/dir /path/to/native.pdb
+# Usage: bash script.sh /path/to/PELE/dir /path/to/native.pdb receptor_chains ligand_chains binding_threshold
 
 # ---------------------------------------------------------------
 
@@ -32,12 +32,13 @@ PELE_DIR=$(realpath "$1")
 NATIVE_PDB=$(realpath "$2")
 RECEPTOR_CHAINS=$3
 LIGAND_CHAINS=$4
+BINDING_THRESHOLD=$5
 
 # Make output dir
 mkdir -p $PELE_DIR/structure_evaluation
 
 # Group directories and make output file
-cat $PELE_DIR/outPROD/0/rep* | awk '$1 == 1' | sort -u | awk '$5 < -30' > $PELE_DIR/structure_evaluation/reports.txt
+cat $PELE_DIR/outPROD/0/rep* | awk '$1 == 1' | sort -u | awk -v threshold="$BINDING_THRESHOLD" '$5 < threshold' > $PELE_DIR/structure_evaluation/reports.txt
 touch $PELE_DIR/structure_evaluation/dockq.txt
 
 while IFS= read -r accepted_step
