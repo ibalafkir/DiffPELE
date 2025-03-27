@@ -58,7 +58,7 @@ Finally, check energy profiles in reports located at: `(system)_diffpele/(system
 
 A quite useful command to see metrics of poses in the binding energy funnel:
 ```bash
-awk '$5<-50' | sort -k5,5n | uniq | head
+awk '$5<-50' (system)_diffpele/(system)_diffusion_pele/outPROD/0 | sort -k5,5n | uniq | head
 ```
 
 ### Run PELE in MNV
