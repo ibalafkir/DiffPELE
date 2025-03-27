@@ -33,11 +33,11 @@ source activate /gpfs/scratch/bsc72/ismael/conda_envs/diffpele
 echo " > Running RFdiffusion to explore interface backbone conformations"
 
 python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/1_interface_diffusion.py -m setup \
-									      -pdb $PDB_PATH \
-									      -rc $RECEPTOR_CHAINS \
-									      -lc $LIGAND_CHAINS \
-									      -dc 12.0 \
-									      -rip /gpfs/projects/bsc72/Repos/RFdiffusion/scripts/run_inference.py
+									      									  -pdb $PDB_PATH \
+									      									  -rc $RECEPTOR_CHAINS \
+									                                          -lc $LIGAND_CHAINS \
+									                                          -dc 12.0 \
+									                                          -rip /gpfs/projects/bsc72/Repos/RFdiffusion/scripts/run_inference.py
 cd ${PDB_PATH_NOEXT}_diffusion
 sbatch --partition=acc --wait rfdiffusion_partial.sh
 
@@ -45,25 +45,25 @@ sbatch --partition=acc --wait rfdiffusion_partial.sh
 echo " > Correcting diffusion models"
 
 python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/1_interface_diffusion.py -m fix \
-									      -pdb $PDB_PATH \
-									      -dmi ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels
+									                                          -pdb $PDB_PATH \
+									                                          -dmi ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels
 
 # Set up FastRelax protocol files and runner (bash and greasy) and run minimization
 echo " > Running FastRelax on diffusion models - repacking and iteratively minimizing side chains conformation without altering backbone"
 
 python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/2_fastrelax.py -m parallel \
-	                                                            -pdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix
+	                                                                -pdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix
 sbatch --wait ${PDB_PATH_NOEXT}_diffusion/fastrelax.sh
 mkdir ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax
 mv ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix/*_relax.pdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax # move relaxed diffusion models to new directory
 
 # Set up PELE files and runners
 python /gpfs/scratch/bsc72/ismael/repos/DiffPELE/src/3_pele_simulation.py -pdb $PDB_PATH \
-	                                                                  -rc $RECEPTOR_CHAINS \
-									  -lc $LIGAND_CHAINS \
-									  -dc 12.0 \
-									  -m multiple \
-									  -mpdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax
+	                                                                      -rc $RECEPTOR_CHAINS \
+									                                      -lc $LIGAND_CHAINS \
+									                                      -dc 12.0 \
+									                                      -m multiple \
+									                                      -mpdb ${PDB_PATH_NOEXT}_diffusion/${PDB_PATH_BASENAME_NOEXT}_diffModels_fix_relax
 PELE_BASE_DIR=${PDB_PATH_NOEXT}_diffusion_pele
 cd $PELE_BASE_DIR
 

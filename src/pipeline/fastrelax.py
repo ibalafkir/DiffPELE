@@ -41,11 +41,11 @@ def fast_relax_protocol(
     e_0 = scorefxn(pose)
     
     # Side-chain or side-chain and backbone relaxation
-    #movemap = pyrosetta.rosetta.core.kinematics.MoveMap() # Remove if you want to relax the backbone
-    #movemap.set_bb(False)  # do not allow backbone movements. Remove if you want to relax the backbone
-    #movemap.set_chi(True)  # allow side chain movements. Remove if you want to relax the backbone
-    #movemap.set_jump(False)  # disable rigid-body movements. Remove if you want to relax the backbone
-    #relax_protocol.set_movemap(movemap) # Remove if you want to relax the backbone
+    movemap = pyrosetta.rosetta.core.kinematics.MoveMap() #           Remove line if you want to relax the backbone
+    movemap.set_bb(False)  # do not allow backbone movements.         Remove line if you want to relax the backbone
+    movemap.set_chi(True)  # allow side chain movements.              Remove line if you want to relax the backbone
+    movemap.set_jump(False)  # disable rigid-body movements.          Remove line if you want to relax the backbone
+    relax_protocol.set_movemap(movemap) #                             Remove line if you want to relax the backbone
     relax_protocol.apply(pose)
     
     # Relax pose

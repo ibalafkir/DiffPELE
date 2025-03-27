@@ -3,7 +3,7 @@
 # Description: From a PELE production simulation, get the poses with 
 # low binding energies (BE) and compare to a native system using DockQ
 
-# Usage: bash script.sh /path/to/PELE/dir /path/to/native.pdb receptor_chains ligand_chains binding_threshold
+# Usage: bash script.sh /path/to/PELE/dir /path/to/native.pdb receptor_chains ligand_chains
 
 # ---------------------------------------------------------------
 
@@ -32,17 +32,24 @@ PELE_DIR=$(realpath "$1")
 NATIVE_PDB=$(realpath "$2")
 RECEPTOR_CHAINS=$3
 LIGAND_CHAINS=$4
-BINDING_THRESHOLD=$5
 
 # Make output dir
 mkdir -p $PELE_DIR/structure_evaluation
 
 # Group directories and make output file
-cat $PELE_DIR/outPROD/0/rep* | awk '$1 == 1' | sort -u | awk -v threshold="$BINDING_THRESHOLD" '$5 < threshold' > $PELE_DIR/structure_evaluation/reports.txt
+cat $PELE_DIR/outPROD/0/rep* | awk '$5<-40' | sort -k5,5n | uniq | head -n 300
+cat $PELE_DIR/outPROD/0/rep* | awk '$1 == 1' | sort -k5,5n | uniq | head -n 300 > $PELE_DIR/structure_evaluation/reports.txt
+echo "You will be evaluating this number of poses:"
+cat $PELE_DIR/structure_evaluation/reports.txt | wc -l
+NUM_MODEL=1
+
 touch $PELE_DIR/structure_evaluation/dockq.txt
 
 while IFS= read -r accepted_step
 do
+
+# Debug
+echo "Computing model number: ${NUM_MODEL}"
 
 # Use accepted_step's metrics to get model to get
 acceptedStep=$(echo $accepted_step | awk '{print $3}')
@@ -79,4 +86,34 @@ echo $dockq_result >> $PELE_DIR/structure_evaluation/dockq.txt
 # Write space	
 echo " " >> $PELE_DIR/structure_evaluation/dockq.txt	
 
+# Increase count for next model
+((NUM_MODEL++))  # Increment the counter
+
+# Print from time to time
+if (( NUM_MODEL % 50 == 0 )); then
+cat $PELE_DIR/structure_evaluation/dockq.txt
+fi
+
+
 done < $PELE_DIR/structure_evaluation/reports.txt
+
+# Calculate baseline and DockQ and Fnats of DiffPELE models
+fnats=$(cat $PELE_DIR/structure_evaluation/dockq.txt | grep 'fnat' | awk '{print $8}' | sort -nr | awk '{printf (NR==1 ? "%s" : ",%s"), $0}')
+dockq=$(cat $PELE_DIR/structure_evaluation/dockq.txt | grep 'DockQ' | awk '{print $2}' | sort -nr | awk '{printf (NR==1 ? "%s" : ",%s"), $0}')
+binding=$(cat $PELE_DIR/structure_evaluation/dockq.txt | awk '{print $5}' | awk '$1<0' | awk 'NF' | sort -n | awk '{printf (NR==1 ? "%s" : ",%s"), $0}')
+fnats=$(cat $PELE_DIR/structure_evaluation/dockq.txt | grep 'fnat' | awk '{print $8}' | awk '{printf (NR==1 ? "%s" : ",%s"), $0}')
+total=$(cat $PELE_DIR/structure_evaluation/dockq.txt | awk '{print $4}' | awk '$1<0' | awk 'NF' | sort -n | awk '{printf (NR==1 ? "%s" : ",%s"), $0}')
+
+# Append results
+echo " " >> $PELE_DIR/structure_evaluation/dockq.txt
+echo " " >> $PELE_DIR/structure_evaluation/dockq.txt
+echo "Fnats:" >> $PELE_DIR/structure_evaluation/dockq.txt
+echo $fnats >> $PELE_DIR/structure_evaluation/dockq.txt
+echo " " >> $PELE_DIR/structure_evaluation/dockq.txt
+echo "DockQ:" >> $PELE_DIR/structure_evaluation/dockq.txt
+echo $dockq >> $PELE_DIR/structure_evaluation/dockq.txt
+echo "Binding ene:" >> $PELE_DIR/structure_evaluation/dockq.txt
+echo $binding >> $PELE_DIR/structure_evaluation/dockq.txt
+echo " " >> $PELE_DIR/structure_evaluation/dockq.txt
+echo "Total ene:" >> $PELE_DIR/structure_evaluation/dockq.txt
+echo $total >> $PELE_DIR/structure_evaluation/dockq.txt
