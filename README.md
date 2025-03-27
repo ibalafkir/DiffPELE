@@ -1,7 +1,7 @@
 # DiffPELE
-This pipeline optimizes flexible protein-protein and antibody-antigen interactions. This is done through interface backbone diffusion and Monte Carlo rotations/translations using RFdiffusion and PELE. 
+This pipeline optimizes flexible antibody-antigen interactions. This is done through interface backbone diffusion and Monte Carlo rotations/translations and side chain samplings using RFdiffusion and PELE. 
 
-The objective is to accurately model the conformations of the regions involved in the antibody-antigen or protein-protein interactions.
+The objective is to accurately model the conformations of the regions involved in the antibody-antigen interactions.
 
 ## Installation
 ### Environment manual setup
@@ -29,7 +29,7 @@ pip install DockQ
 
 ## Usage
 
-This repository allows running the protein-protein PELE equilibration-production protocol and the DiffPELE protocol, which is a pipeline that integrates the next workflow, given a PDB protein-protein system:
+This repository allows running the protein-protein PELE equilibration+production protocol and the DiffPELE protocol. DiffPELE is a pipeline that integrates the next workflow, given a PDB protein-protein/antibody-antigen system:
 - RFdiffusion (partial diffusion protocol) to generate an ensemble of poses with different interface backbone conformations.
 - FastRelax to repack and minimize side chains in diffusion models.
 - PELE to refine (adjust the binding mode and mainly side chains conformations) the repacked and minimized diffusion models.
@@ -43,9 +43,11 @@ Finally, run this Schrodinger pipeline:
 ```bash
 $SCHRODINGER/utilities/prepwizard ./DiffPELE/examples/4POU.pdb ./DiffPELE/examples/4POU_prep.pdb -rehtreat -disulfides -fillloops -fillsidechains -propka_pH 7.4 -minimize_adj_h -f OPLS_2005
 ```
-where $SCHRODINGER stands for the path of the Maestro Schrodinger molecular modeling suite.
+where $SCHRODINGER stands for the path of the Maestro Schrodinger molecular modeling suite in your cluster or local machine.
 
 ### Run DiffPELE in MNV
+
+We provide runners for running DiffPELE in our computer cluster MareNostrumV (MNV).
 
 To run DiffPELE in MNV use our runner and adapt parameters to your input PDB and chains or input from terminal. See these 2 examples:
 ```bash
@@ -54,25 +56,34 @@ sbatch ./DiffPELE/diffpele_MNV.runner ./DiffPELE/examples/5C7X.pdb H,L A
 ```
 Finally, check energy profiles in reports located at: `(system)_diffpele/(system)_diffusion_pele/outPROD/0`
 
+A quite useful command to see metrics of poses in the binding energy funnel:
+```bash
+awk '$5<-50' | sort -k5,5n | uniq | head
+```
+
 ### Run PELE in MNV
 
-Similarly, to run PELE in MNV on protein-protein systems, use our runner and adapt parameters to your input PDB and chains or input from terminal. See these 2 examples:
+Similarly, to run PELE in MNV on protein-protein (or antibody-antigen) systems, use our runner and adapt parameters to your input PDB and chains or input from terminal. See these 2 examples:
 ```bash
 sbatch ./DiffPELE/pele_MNV.runner ./DiffPELE/examples/4POU.pdb B A
 sbatch ./DiffPELE/pele_MNV.runner ./DiffPELE/examples/5C7X.pdb H,L A
 ```
-Finally, check energy profiles in reports located at: `(system)_peleBaseline/outPROD/0`
-In this context, run PELE on a system with non-optimized interface conformations and on a system with optimized interface conformations to account for the energy baseline.
+Finally, check energy profiles in reports as mentioned before
 
 ### Run DockQ
-We use DockQ to measure (according to structure metrics) how unoptimized is a system in comparison to its optimized version. If there is one receptor chain and one ligand chain (thus one interface) DockQ can be run like that.
+We use DockQ to measure (according to structure metrics) how unoptimized is a system in comparison to its optimized version. If there is one receptor chain and one ligand chain (thus one interface) DockQ can be run like this:
 
 ```bash
 DockQ <a> <b>
 ```
-where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized/native one. In case the receptor has 2 chains, you need to merge the receptor chains. See for further information: https://github.com/bjornwallner/DockQ/issues/33
+where 'a' stands for the system with non-optimized interactions and 'b' stands for the optimized/native one. In case the receptor has 2 chains, you need to merge the receptor chains (see for further information: https://github.com/bjornwallner/DockQ/issues/33).
 
-To run DockQ on the best PELE poses (in binding energy), run our script:
+We automated such task in the following script:
+```bash
+python ./DiffPELE/src/4_evaluate_models.py -pdb 5C7X_native.pdb -mp 5C7X_unoptimized.pdb -rc H,L -lc A
+```
+
+To run DockQ on the best PELE poses (in binding energy, top 300), run our script:
 ```bash
 bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb receptorChain(s) ligandChain
 bash ./DiffPELE/bin/evaluate_models.sh /path/to/PELE/dir /path/to/native_system.pdb B A
